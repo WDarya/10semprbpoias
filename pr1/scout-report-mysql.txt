@@ -1,0 +1,355 @@
+docker scout cves mysql:latest
+    ✓ SBOM of image already cached, 174 packages indexed
+    ✓ 4 exceptions obtained
+    ✗ Detected 7 vulnerable packages with a total of 49 vulnerabilities
+
+
+## Overview
+
+                   │                                       Analyzed Image
+───────────────────┼────────────────────────────────────────────────────────────────────────────────────────────
+ Target            │  mysql:latest
+   digest          │  f0f0d4591d23
+   platform        │ linux/amd64
+   provenance      │ https://github.com/docker-library/mysql.git
+                   │  f59266f3ec6f1ddfc66d1db613430d9dcc52419b
+   vulnerabilities │    1C    20H    22M     6L
+   size            │ 273 MB
+   packages        │ 174
+                   │
+ Base image        │  oisupport/staging-amd64:6f3721898c4fbbcc99dd00a50a6b9e73f560d33184edb3744f5b7de6ea4ce34e
+                   │  5a30e13f8a59
+
+
+## Packages and Vulnerabilities
+
+   1C    16H    18M     1L  stdlib 1.24.6
+pkg:golang/stdlib@1.24.6
+
+9.7/Dockerfile.oracle (119:119)
+COPY docker-entrypoint.sh /usr/local/bin/
+
+    ✗ CRITICAL CVE-2025-68121
+      https://scout.docker.com/v/CVE-2025-68121
+      Affected range : <1.24.13
+      Fixed version  : 1.24.13
+
+    ✗ HIGH CVE-2026-42504
+      https://scout.docker.com/v/CVE-2026-42504
+      Affected range : <1.25.11
+      Fixed version  : 1.25.11
+
+    ✗ HIGH CVE-2026-42499
+      https://scout.docker.com/v/CVE-2026-42499
+      Affected range : <1.25.10
+      Fixed version  : 1.25.10
+
+    ✗ HIGH CVE-2026-39836
+      https://scout.docker.com/v/CVE-2026-39836
+      Affected range : <1.25.10
+      Fixed version  : 1.25.10
+
+    ✗ HIGH CVE-2026-39820
+      https://scout.docker.com/v/CVE-2026-39820
+      Affected range : <1.25.10
+      Fixed version  : 1.25.10
+
+    ✗ HIGH CVE-2026-33814
+      https://scout.docker.com/v/CVE-2026-33814
+      Affected range : <1.25.10
+      Fixed version  : 1.25.10
+
+    ✗ HIGH CVE-2026-33811
+      https://scout.docker.com/v/CVE-2026-33811
+      Affected range : <1.25.10
+      Fixed version  : 1.25.10
+
+    ✗ HIGH CVE-2026-32283
+      https://scout.docker.com/v/CVE-2026-32283
+      Affected range : <1.25.9
+      Fixed version  : 1.25.9
+
+    ✗ HIGH CVE-2026-32281
+      https://scout.docker.com/v/CVE-2026-32281
+      Affected range : <1.25.9
+      Fixed version  : 1.25.9
+
+    ✗ HIGH CVE-2026-32280
+      https://scout.docker.com/v/CVE-2026-32280
+      Affected range : <1.25.9
+      Fixed version  : 1.25.9
+
+    ✗ HIGH CVE-2026-25679
+      https://scout.docker.com/v/CVE-2026-25679
+      Affected range : <1.25.8
+      Fixed version  : 1.25.8
+
+    ✗ HIGH CVE-2025-61729
+      https://scout.docker.com/v/CVE-2025-61729
+      Affected range : <1.24.11
+      Fixed version  : 1.24.11
+
+    ✗ HIGH CVE-2025-61726
+      https://scout.docker.com/v/CVE-2025-61726
+      Affected range : <1.24.12
+      Fixed version  : 1.24.12
+
+    ✗ HIGH CVE-2025-61725
+      https://scout.docker.com/v/CVE-2025-61725
+      Affected range : <1.24.8
+      Fixed version  : 1.24.8
+
+    ✗ HIGH CVE-2025-61723
+      https://scout.docker.com/v/CVE-2025-61723
+      Affected range : <1.24.8
+      Fixed version  : 1.24.8
+
+    ✗ HIGH CVE-2025-58188
+      https://scout.docker.com/v/CVE-2025-58188
+      Affected range : <1.24.8
+      Fixed version  : 1.24.8
+
+    ✗ HIGH CVE-2025-58187
+      https://scout.docker.com/v/CVE-2025-58187
+      Affected range : <1.24.9
+      Fixed version  : 1.24.9
+
+    ✗ MEDIUM CVE-2026-27145
+      https://scout.docker.com/v/CVE-2026-27145
+      Affected range : <1.25.11
+      Fixed version  : 1.25.11
+
+    ✗ MEDIUM CVE-2025-61728
+      https://scout.docker.com/v/CVE-2025-61728
+      Affected range : <1.24.12
+      Fixed version  : 1.24.12
+
+    ✗ MEDIUM CVE-2025-61727
+      https://scout.docker.com/v/CVE-2025-61727
+      Affected range : <1.24.11
+      Fixed version  : 1.24.11
+
+    ✗ MEDIUM CVE-2026-32282
+      https://scout.docker.com/v/CVE-2026-32282
+      Affected range : <1.25.9
+      Fixed version  : 1.25.9
+
+    ✗ MEDIUM CVE-2026-39826
+      https://scout.docker.com/v/CVE-2026-39826
+      Affected range : <1.25.10
+      Fixed version  : 1.25.10
+
+    ✗ MEDIUM CVE-2026-39823
+      https://scout.docker.com/v/CVE-2026-39823
+      Affected range : <1.25.10
+      Fixed version  : 1.25.10
+
+    ✗ MEDIUM CVE-2026-32289
+      https://scout.docker.com/v/CVE-2026-32289
+      Affected range : <1.25.9
+      Fixed version  : 1.25.9
+
+    ✗ MEDIUM CVE-2026-27142
+      https://scout.docker.com/v/CVE-2026-27142
+      Affected range : <1.25.8
+      Fixed version  : 1.25.8
+
+    ✗ MEDIUM CVE-2026-32288
+      https://scout.docker.com/v/CVE-2026-32288
+      Affected range : <1.25.9
+      Fixed version  : 1.25.9
+
+    ✗ MEDIUM CVE-2026-42507
+      https://scout.docker.com/v/CVE-2026-42507
+      Affected range : <1.25.11
+      Fixed version  : 1.25.11
+
+    ✗ MEDIUM CVE-2026-39825
+      https://scout.docker.com/v/CVE-2026-39825
+      Affected range : <1.25.10
+      Fixed version  : 1.25.10
+
+    ✗ MEDIUM CVE-2025-61730
+      https://scout.docker.com/v/CVE-2025-61730
+      Affected range : <1.24.12
+      Fixed version  : 1.24.12
+
+    ✗ MEDIUM CVE-2025-61724
+      https://scout.docker.com/v/CVE-2025-61724
+      Affected range : <1.24.8
+      Fixed version  : 1.24.8
+
+    ✗ MEDIUM CVE-2025-58189
+      https://scout.docker.com/v/CVE-2025-58189
+      Affected range : <1.24.8
+      Fixed version  : 1.24.8
+
+    ✗ MEDIUM CVE-2025-58186
+      https://scout.docker.com/v/CVE-2025-58186
+      Affected range : <1.24.8
+      Fixed version  : 1.24.8
+
+    ✗ MEDIUM CVE-2025-58185
+      https://scout.docker.com/v/CVE-2025-58185
+      Affected range : <1.24.8
+      Fixed version  : 1.24.8
+
+    ✗ MEDIUM CVE-2025-47912
+      https://scout.docker.com/v/CVE-2025-47912
+      Affected range : <1.24.8
+      Fixed version  : 1.24.8
+
+    ✗ MEDIUM CVE-2025-58183
+      https://scout.docker.com/v/CVE-2025-58183
+      Affected range : <1.24.8
+      Fixed version  : 1.24.8
+
+    ✗ LOW CVE-2026-27139
+      https://scout.docker.com/v/CVE-2026-27139
+      Affected range : <1.25.8
+      Fixed version  : 1.25.8
+
+
+   0C     2H     0M     0L  urllib3 2.6.3
+pkg:pypi/urllib3@2.6.3
+
+9.7/Dockerfile.oracle (119:119)
+COPY docker-entrypoint.sh /usr/local/bin/
+
+    ✗ HIGH CVE-2026-44432 [Improper Handling of Highly Compressed Data (Data Amplification)]
+      https://scout.docker.com/v/CVE-2026-44432
+      Affected range : >=2.6.0
+                     : <2.7.0
+      Fixed version  : 2.7.0
+      CVSS Score     : 8.9
+      CVSS Vector    : CVSS:4.0/AV:N/AC:L/AT:P/PR:N/UI:N/VC:N/VI:N/VA:H/SC:N/SI:N/SA:H
+
+    ✗ HIGH CVE-2026-44431 [Exposure of Sensitive Information to an Unauthorized Actor]
+      https://scout.docker.com/v/CVE-2026-44431
+      Affected range : >=1.23
+                     : <2.7.0
+      Fixed version  : 2.7.0
+      CVSS Score     : 8.2
+      CVSS Vector    : CVSS:4.0/AV:N/AC:H/AT:P/PR:N/UI:N/VC:H/VI:N/VA:N/SC:N/SI:N/SA:N
+
+
+   0C     1H     1M     1L  cryptography 46.0.5
+pkg:pypi/cryptography@46.0.5
+
+9.7/Dockerfile.oracle (119:119)
+COPY docker-entrypoint.sh /usr/local/bin/
+
+    ✗ HIGH GHSA-537c-gmf6-5ccf [Out-of-bounds Read]
+      https://scout.docker.com/v/GHSA-537c-gmf6-5ccf
+      Affected range : >=0.5.0
+                     : <48.0.1
+      Fixed version  : 48.0.1
+      CVSS Score     : 7.5
+      CVSS Vector    : CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H
+
+    ✗ MEDIUM CVE-2026-39892 [Improper Restriction of Operations within the Bounds of a Memory Buffer]
+      https://scout.docker.com/v/CVE-2026-39892
+      Affected range : >=45.0.0
+                     : <46.0.7
+      Fixed version  : 46.0.7
+      CVSS Score     : 6.9
+      CVSS Vector    : CVSS:4.0/AV:N/AC:L/AT:N/PR:N/UI:N/VC:N/VI:N/VA:L/SC:N/SI:N/SA:N
+
+    ✗ LOW CVE-2026-34073 [Improper Certificate Validation]
+      https://scout.docker.com/v/CVE-2026-34073
+      Affected range : <46.0.6
+      Fixed version  : 46.0.6
+      CVSS Score     : 1.7
+      CVSS Vector    : CVSS:4.0/AV:N/AC:H/AT:P/PR:N/UI:N/VC:N/VI:L/VA:N/SC:N/SI:N/SA:N/E:U
+
+
+   0C     1H     0M     1L  pyopenssl 25.3.0
+pkg:pypi/pyopenssl@25.3.0
+
+9.7/Dockerfile.oracle (119:119)
+COPY docker-entrypoint.sh /usr/local/bin/
+
+    ✗ HIGH CVE-2026-27459 [Buffer Copy without Checking Size of Input ('Classic Buffer Overflow')]
+      https://scout.docker.com/v/CVE-2026-27459
+      Affected range : >=22.0.0
+                     : <26.0.0
+      Fixed version  : 26.0.0
+      CVSS Score     : 7.2
+      CVSS Vector    : CVSS:4.0/AV:N/AC:H/AT:P/PR:N/UI:N/VC:H/VI:H/VA:H/SC:N/SI:N/SA:N/E:U
+
+    ✗ LOW CVE-2026-27448 [Not Failing Securely ('Failing Open')]
+      https://scout.docker.com/v/CVE-2026-27448
+      Affected range : >=0.14.0
+                     : <26.0.0
+      Fixed version  : 26.0.0
+      CVSS Score     : 1.7
+      CVSS Vector    : CVSS:4.0/AV:N/AC:H/AT:P/PR:N/UI:N/VC:N/VI:L/VA:N/SC:N/SI:N/SA:N/E:U
+
+
+   0C     0H     3M     1L  pip 25.3
+pkg:pypi/pip@25.3
+
+9.7/Dockerfile.oracle (119:119)
+COPY docker-entrypoint.sh /usr/local/bin/
+
+    ✗ MEDIUM CVE-2026-8643
+      https://scout.docker.com/v/CVE-2026-8643
+      Affected range : <26.1.2
+      Fixed version  : 26.1.2
+      CVSS Score     : 5.5
+      CVSS Vector    : CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:N/I:H/A:N
+
+    ✗ MEDIUM CVE-2026-6357 [Inclusion of Functionality from Untrusted Control Sphere]
+      https://scout.docker.com/v/CVE-2026-6357
+      Affected range : <26.1
+      Fixed version  : 26.1
+      CVSS Score     : 5.3
+      CVSS Vector    : CVSS:4.0/AV:L/AC:L/AT:P/PR:H/UI:A/VC:H/VI:H/VA:N/SC:N/SI:N/SA:N
+
+    ✗ MEDIUM CVE-2026-3219 [Unrestricted Upload of File with Dangerous Type]
+      https://scout.docker.com/v/CVE-2026-3219
+      Affected range : <=26.0.1
+      Fixed version  : 26.1
+      CVSS Score     : 4.6
+      CVSS Vector    : CVSS:4.0/AV:L/AC:L/AT:N/PR:N/UI:A/VC:N/VI:L/VA:N/SC:N/SI:N/SA:N
+
+    ✗ LOW CVE-2026-1703 [Improper Limitation of a Pathname to a Restricted Directory ('Path Traversal')]
+      https://scout.docker.com/v/CVE-2026-1703
+      Affected range : <26.0
+      Fixed version  : 26.0
+      CVSS Score     : 2.0
+      CVSS Vector    : CVSS:4.0/AV:N/AC:L/AT:P/PR:L/UI:A/VC:N/VI:L/VA:N/SC:N/SI:N/SA:N
+
+
+   0C     0H     0M     1L  golang.org/x/sys 0.1.0
+pkg:golang/golang.org/x/sys@0.1.0
+
+9.7/Dockerfile.oracle (119:119)
+COPY docker-entrypoint.sh /usr/local/bin/
+
+    ✗ LOW CVE-2026-39824
+      https://scout.docker.com/v/CVE-2026-39824
+      Affected range : <0.44.0
+      Fixed version  : 0.44.0
+
+
+   0C     0H     0M     1L  paramiko 4.0.0
+pkg:pypi/paramiko@4.0.0
+
+9.7/Dockerfile.oracle (119:119)
+COPY docker-entrypoint.sh /usr/local/bin/
+
+    ✗ LOW CVE-2026-44405 [Use of a Broken or Risky Cryptographic Algorithm]
+      https://scout.docker.com/v/CVE-2026-44405
+      Affected range : <=4.0.0
+      Fixed version  : not fixed
+      CVSS Score     : 3.4
+      CVSS Vector    : CVSS:3.1/AV:A/AC:H/PR:N/UI:N/S:C/C:N/I:L/A:N
+
+
+
+49 vulnerabilities found in 7 packages
+  CRITICAL  1
+  HIGH      20
+  MEDIUM    22
+  LOW       6

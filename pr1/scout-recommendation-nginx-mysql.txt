@@ -1,0 +1,19 @@
+$docker scout recommendations nginx:latest
+    ✓ SBOM of image already cached, 233 packages indexed
+
+ Target     │  nginx:latest
+   digest   │  4a2d27f57e72
+ Base image │  oisupport/staging-amd64:3dd53c169728ea837da71cea5f1a4b1b1cad82e2c64698a04b1a1d598bbe6d28
+
+No recommendations
+--------------------------------
+
+$ docker scout recommendations mysql:latest
+    ✓ SBOM of image already cached, 174 packages indexed
+
+ Target     │  mysql:latest
+   digest   │  f0f0d4591d23
+ Base image │  oisupport/staging-amd64:6f3721898c4fbbcc99dd00a50a6b9e73f560d33184edb3744f5b7de6ea4ce34e
+
+No recommendations
+

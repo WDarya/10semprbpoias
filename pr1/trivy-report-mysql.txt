@@ -1,0 +1,117 @@
+ trivy image --severity HIGH,CRITICAL mysql:latest
+2026-06-16T23:09:52+03:00       INFO    Vulnerability scanning is enabled
+2026-06-16T23:09:52+03:00       INFO    Secret scanning is enabled
+2026-06-16T23:09:52+03:00       INFO    If your scanning is slow, please try '--scanners vuln' to disable secret scanning
+2026-06-16T23:09:52+03:00       INFO    Please see also https://aquasecurity.github.io/trivy/v0.52/docs/scanner/secret/#recommendation for faster secret detection
+2026-06-16T23:10:02+03:00       INFO    [python] License acquired from METADATA classifiers may be subject to additional terms       name="bcrypt" version="5.0.0"
+2026-06-16T23:10:02+03:00       INFO    [python] License acquired from METADATA classifiers may be subject to additional terms       name="certifi" version="2026.2.25"
+2026-06-16T23:10:02+03:00       INFO    [python] License acquired from METADATA classifiers may be subject to additional terms       name="circuitbreaker" version="2.1.3"
+2026-06-16T23:10:02+03:00       INFO    [python] License acquired from METADATA classifiers may be subject to additional terms       name="invoke" version="2.2.1"
+2026-06-16T23:10:02+03:00       INFO    [python] License acquired from METADATA classifiers may be subject to additional terms       name="oci" version="2.168.2"
+2026-06-16T23:10:02+03:00       INFO    [python] License acquired from METADATA classifiers may be subject to additional terms       name="PyNaCl" version="1.6.2"
+2026-06-16T23:10:02+03:00       INFO    [python] License acquired from METADATA classifiers may be subject to additional terms       name="pyOpenSSL" version="25.3.0"
+2026-06-16T23:10:02+03:00       INFO    [python] License acquired from METADATA classifiers may be subject to additional terms       name="python-dateutil" version="2.9.0.post0"
+2026-06-16T23:10:02+03:00       INFO    [python] License acquired from METADATA classifiers may be subject to additional terms       name="pytz" version="2026.1.post1"
+2026-06-16T23:10:02+03:00       INFO    [python] License acquired from METADATA classifiers may be subject to additional terms       name="PyYAML" version="6.0.2"
+2026-06-16T23:10:02+03:00       INFO    [python] License acquired from METADATA classifiers may be subject to additional terms       name="six" version="1.17.0"
+2026-06-16T23:10:02+03:00       INFO    [python] License acquired from METADATA classifiers may be subject to additional terms       name="svg.py" version="1.6.0"
+2026-06-16T23:10:02+03:00       INFO    Detected OS     family="oracle" version="9.7"
+2026-06-16T23:10:02+03:00       INFO    [oracle] Detecting vulnerabilities...   os_version="9" pkg_num=115
+2026-06-16T23:10:02+03:00       INFO    Number of language-specific files       num=3
+2026-06-16T23:10:02+03:00       INFO    [gobinary] Detecting vulnerabilities...
+2026-06-16T23:10:02+03:00       INFO    [python-pkg] Detecting vulnerabilities...
+2026-06-16T23:10:02+03:00       INFO    [node-pkg] Detecting vulnerabilities...
+
+mysql:latest (oracle 9.7)
+
+Total: 0 (HIGH: 0, CRITICAL: 0)
+
+2026-06-16T23:10:02+03:00       INFO    Table result includes only package filenames. Use '--format json' option to get the full path to the package file.
+
+Python (python-pkg)
+
+Total: 4 (HIGH: 4, CRITICAL: 0)
+
+┌─────────────────────────┬─────────────────────┬──────────┬────────┬───────────────────┬───────────────┬───────────────────────────────────────────────────────────┐
+│         Library         │    Vulnerability    │ Severity │ Status │ Installed Version │ Fixed Version │                           Title                           │
+├─────────────────────────┼─────────────────────┼──────────┼────────┼───────────────────┼───────────────┼───────────────────────────────────────────────────────────┤
+│ cryptography (METADATA) │ GHSA-537c-gmf6-5ccf │ HIGH     │ fixed  │ 46.0.5            │ 48.0.1        │ Vulnerable OpenSSL included in cryptography wheels        │
+│                         │                     │          │        │                   │               │ https://github.com/advisories/GHSA-537c-gmf6-5ccf         │
+├─────────────────────────┼─────────────────────┤          │        ├───────────────────┼───────────────┼───────────────────────────────────────────────────────────┤
+│ pyOpenSSL (METADATA)    │ CVE-2026-27459      │          │        │ 25.3.0            │ 26.0.0        │ pyOpenSSL: DTLS cookie callback buffer overflow           │
+│                         │                     │          │        │                   │               │ https://avd.aquasec.com/nvd/cve-2026-27459                │
+├─────────────────────────┼─────────────────────┤          │        ├───────────────────┼───────────────┼───────────────────────────────────────────────────────────┤
+│ urllib3 (METADATA)      │ CVE-2026-44431      │          │        │ 2.6.3             │ 2.7.0         │ urllib3: urllib3: Information disclosure via cross-origin │
+│                         │                     │          │        │                   │               │ redirects forwarding sensitive headers                    │
+│                         │                     │          │        │                   │               │ https://avd.aquasec.com/nvd/cve-2026-44431                │
+│                         ├─────────────────────┤          │        │                   │               ├───────────────────────────────────────────────────────────┤
+│                         │ CVE-2026-44432      │          │        │                   │               │ urllib3: urllib3: Denial of Service due to excessive HTTP │
+│                         │                     │          │        │                   │               │ response decompression                                    │
+│                         │                     │          │        │                   │               │ https://avd.aquasec.com/nvd/cve-2026-44432                │
+└─────────────────────────┴─────────────────────┴──────────┴────────┴───────────────────┴───────────────┴───────────────────────────────────────────────────────────┘
+
+usr/local/bin/gosu (gobinary)
+
+Total: 15 (HIGH: 14, CRITICAL: 1)
+
+┌─────────┬────────────────┬──────────┬────────┬───────────────────┬──────────────────────────────┬──────────────────────────────────────────────────────────────┐
+│ Library │ Vulnerability  │ Severity │ Status │ Installed Version │        Fixed Version         │                            Title                             │
+├─────────┼────────────────┼──────────┼────────┼───────────────────┼──────────────────────────────┼──────────────────────────────────────────────────────────────┤
+│ stdlib  │ CVE-2025-68121 │ CRITICAL │ fixed  │ 1.24.6            │ 1.24.13, 1.25.7, 1.26.0-rc.3 │ crypto/tls: crypto/tls: Incorrect certificate validation     │
+│         │                │          │        │                   │                              │ during TLS session resumption                                │
+│         │                │          │        │                   │                              │ https://avd.aquasec.com/nvd/cve-2025-68121                   │
+│         ├────────────────┼──────────┤        │                   ├──────────────────────────────┼──────────────────────────────────────────────────────────────┤
+│         │ CVE-2025-61726 │ HIGH     │        │                   │ 1.24.12, 1.25.6              │ golang: net/url: Memory exhaustion in query parameter        │
+│         │                │          │        │                   │                              │ parsing in net/url                                           │
+│         │                │          │        │                   │                              │ https://avd.aquasec.com/nvd/cve-2025-61726                   │
+│         ├────────────────┤          │        │                   ├──────────────────────────────┼──────────────────────────────────────────────────────────────┤
+│         │ CVE-2025-61729 │          │        │                   │ 1.24.11, 1.25.5              │ crypto/x509: golang: Denial of Service due to excessive      │
+│         │                │          │        │                   │                              │ resource consumption via crafted...                          │
+│         │                │          │        │                   │                              │ https://avd.aquasec.com/nvd/cve-2025-61729                   │
+│         ├────────────────┤          │        │                   ├──────────────────────────────┼──────────────────────────────────────────────────────────────┤
+│         │ CVE-2026-25679 │          │        │                   │ 1.25.8, 1.26.1               │ net/url: Incorrect parsing of IPv6 host literals in net/url  │
+│         │                │          │        │                   │                              │ https://avd.aquasec.com/nvd/cve-2026-25679                   │
+│         ├────────────────┤          │        │                   ├──────────────────────────────┼──────────────────────────────────────────────────────────────┤
+│         │ CVE-2026-32280 │          │        │                   │ 1.25.9, 1.26.2               │ crypto/x509: crypto/tls: golang: Go: Denial of Service       │
+│         │                │          │        │                   │                              │ vulnerability in certificate chain building...               │
+│         │                │          │        │                   │                              │ https://avd.aquasec.com/nvd/cve-2026-32280                   │
+│         ├────────────────┤          │        │                   │                              ├──────────────────────────────────────────────────────────────┤
+│         │ CVE-2026-32281 │          │        │                   │                              │ crypto/x509: golang: Go crypto/x509: Denial of Service via   │
+│         │                │          │        │                   │                              │ inefficient certificate chain validation...                  │
+│         │                │          │        │                   │                              │ https://avd.aquasec.com/nvd/cve-2026-32281                   │
+│         ├────────────────┤          │        │                   │                              ├──────────────────────────────────────────────────────────────┤
+│         │ CVE-2026-32283 │          │        │                   │                              │ crypto/tls: golang: Go crypto/tls: Denial of Service via     │
+│         │                │          │        │                   │                              │ multiple TLS 1.3 key...                                      │
+│         │                │          │        │                   │                              │ https://avd.aquasec.com/nvd/cve-2026-32283                   │
+│         ├────────────────┤          │        │                   ├──────────────────────────────┼──────────────────────────────────────────────────────────────┤
+│         │ CVE-2026-33811 │          │        │                   │ 1.25.10, 1.26.3              │ net: golang: Go net package: Denial of Service via long      │
+│         │                │          │        │                   │                              │ CNAME response...                                            │
+│         │                │          │        │                   │                              │ https://avd.aquasec.com/nvd/cve-2026-33811                   │
+│         ├────────────────┤          │        │                   │                              ├──────────────────────────────────────────────────────────────┤
+│         │ CVE-2026-33814 │          │        │                   │                              │ When processing HTTP/2 SETTINGS frames, transport will enter │
+│         │                │          │        │                   │                              │ an infini ...                                                │
+│         │                │          │        │                   │                              │ https://avd.aquasec.com/nvd/cve-2026-33814                   │
+│         ├────────────────┤          │        │                   │                              ├──────────────────────────────────────────────────────────────┤
+│         │ CVE-2026-39820 │          │        │                   │                              │ Well-crafted inputs reaching ParseAddress, ParseAddressList, │
+│         │                │          │        │                   │                              │ and Parse ...                                                │
+│         │                │          │        │                   │                              │ https://avd.aquasec.com/nvd/cve-2026-39820                   │
+│         ├────────────────┤          │        │                   │                              ├──────────────────────────────────────────────────────────────┤
+│         │ CVE-2026-39823 │          │        │                   │                              │ CVE-2026-27142 fixed a vulnerability in which URLs were not  │
+│         │                │          │        │                   │                              │ correctly ......                                             │
+│         │                │          │        │                   │                              │ https://avd.aquasec.com/nvd/cve-2026-39823                   │
+│         ├────────────────┤          │        │                   │                              ├──────────────────────────────────────────────────────────────┤
+│         │ CVE-2026-39825 │          │        │                   │                              │ ReverseProxy can forward queries containing parameters not   │
+│         │                │          │        │                   │                              │ visible to ...                                               │
+│         │                │          │        │                   │                              │ https://avd.aquasec.com/nvd/cve-2026-39825                   │
+│         ├────────────────┤          │        │                   │                              ├──────────────────────────────────────────────────────────────┤
+│         │ CVE-2026-39836 │          │        │                   │                              │ ELSA-2026-22112: go-toolset:ol8 security update (IMPORTANT)  │
+│         │                │          │        │                   │                              │ https://avd.aquasec.com/nvd/cve-2026-39836                   │
+│         ├────────────────┤          │        │                   │                              ├──────────────────────────────────────────────────────────────┤
+│         │ CVE-2026-42499 │          │        │                   │                              │ Pathological inputs could cause DoS through consumePhrase    │
+│         │                │          │        │                   │                              │ when parsing ...                                             │
+│         │                │          │        │                   │                              │ https://avd.aquasec.com/nvd/cve-2026-42499                   │
+│         ├────────────────┤          │        │                   ├──────────────────────────────┼──────────────────────────────────────────────────────────────┤
+│         │ CVE-2026-42504 │          │        │                   │ 1.25.11, 1.26.4              │ Decoding a maliciously-crafted MIME header containing many   │
+│         │                │          │        │                   │                              │ invalid enc ...                                              │
+│         │                │          │        │                   │                              │ https://avd.aquasec.com/nvd/cve-2026-42504                   │
+└─────────┴────────────────┴──────────┴────────┴───────────────────┴──────────────────────────────┴──────────────────────────────────────────────────────────────┘

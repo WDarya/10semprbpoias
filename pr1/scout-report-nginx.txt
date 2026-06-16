@@ -1,0 +1,2261 @@
+docker scout cves nginx:latest
+    ✓ SBOM of image already cached, 233 packages indexed
+    ✗ Detected 25 vulnerable packages with a total of 78 vulnerabilities
+
+## Overview
+
+                   │                                       Analyzed Image
+───────────────────┼────────────────────────────────────────────────────────────────────────────────────────────
+ Target            │  nginx:latest
+   digest          │  4a2d27f57e72
+   platform        │ linux/amd64
+   provenance      │ https://github.com/nginx/docker-nginx.git
+                   │  3375edc7170bc7b7da708c1c658706eb5355e099
+   vulnerabilities │    0C     6H    11M    60L     1?
+   size            │ 63 MB
+   packages        │ 233
+                   │
+ Base image        │  oisupport/staging-amd64:3dd53c169728ea837da71cea5f1a4b1b1cad82e2c64698a04b1a1d598bbe6d28
+                   │  1275c5673a61
+
+
+## Packages and Vulnerabilities
+
+   0C     3H     5M     1L  libheif 1.19.8-1
+pkg:deb/debian/libheif@1.19.8-1?os_distro=trixie&os_name=debian&os_version=13
+
+mainline/debian/Dockerfile (17:136)
+RUN set -x \
+# create nginx user/group first, to be consistent throughout docker variants
+    && groupadd --system --gid 101 nginx \
+    && useradd --system --gid nginx --no-create-home --home /nonexistent --comment "nginx user" --shell /bin/false --uid 101 nginx \
+    && apt-get update \
+    && apt-get install --no-install-recommends --no-install-suggests -y gnupg1 ca-certificates \
+    && \
+    NGINX_GPGKEYS="573BFD6B3D8FBC641079A6ABABF5BD827BD9BF62 8540A6F18833A80E9C1653A42FD21310B49F6B46 9E9BE90EACBCDE69FE9B204CBCDCD8A38D88A2B3"; \
+    NGINX_GPGKEY_PATH=/etc/apt/keyrings/nginx-archive-keyring.gpg; \
+    export GNUPGHOME="$(mktemp -d)"; \
+    found=''; \
+    for NGINX_GPGKEY in $NGINX_GPGKEYS; do \
+    for server in \
+        hkp://keyserver.ubuntu.com:80 \
+        pgp.mit.edu \
+    ; do \
+        echo "Fetching GPG key $NGINX_GPGKEY from $server"; \
+        gpg1 --batch --keyserver "$server" --keyserver-options timeout=10 --recv-keys "$NGINX_GPGKEY" && found=yes && break; \
+    done; \
+    test -z "$found" && echo >&2 "error: failed to fetch GPG key $NGINX_GPGKEY" && exit 1; \
+    done; \
+    gpg1 --batch --export $NGINX_GPGKEYS > "$NGINX_GPGKEY_PATH" ; \
+    rm -rf "$GNUPGHOME"; \
+    apt-get remove --purge --auto-remove -y gnupg1 && rm -rf /var/lib/apt/lists/* \
+    && dpkgArch="$(dpkg --print-architecture)" \
+    && nginxPackages=" \
+        nginx=${NGINX_VERSION}-${PKG_RELEASE} \
+        nginx-module-xslt=${NGINX_VERSION}-${DYNPKG_RELEASE} \
+        nginx-module-geoip=${NGINX_VERSION}-${DYNPKG_RELEASE} \
+        nginx-module-image-filter=${NGINX_VERSION}-${DYNPKG_RELEASE} \
+        nginx-module-njs=${NGINX_VERSION}+${NJS_VERSION}-${NJS_RELEASE} \
+        nginx-module-acme=${NGINX_VERSION}+${ACME_VERSION}-${PKG_RELEASE} \
+    " \
+    && case "$dpkgArch" in \
+        amd64|arm64) \
+# arches officialy built by upstream
+            echo "deb [signed-by=$NGINX_GPGKEY_PATH] https://nginx.org/packages/mainline/debian/ trixie nginx" >> /etc/apt/sources.list.d/nginx.list \
+            && apt-get update \
+            ;; \
+        *) \
+# we're on an architecture upstream doesn't officially build for
+# let's build binaries from the published packaging sources
+# new directory for storing sources and .deb files
+            tempDir="$(mktemp -d)" \
+            && chmod 777 "$tempDir" \
+# (777 to ensure APT's "_apt" user can access it too)
+            \
+# save list of currently-installed packages so build dependencies can be cleanly removed later
+            && savedAptMark="$(apt-mark showmanual)" \
+            \
+# build .deb files from upstream's packaging sources
+            && apt-get update \
+            && apt-get install --no-install-recommends --no-install-suggests -y \
+                cargo \
+                curl \
+                devscripts \
+                equivs \
+                git \
+                libxml2-utils \
+                lsb-release \
+                xsltproc \
+            && ( \
+                cd "$tempDir" \
+                && export CARGO_HOME="$tempDir/.cargo" \
+                && REVISION="b151aac903a6fc121d57f0909415381d0a1c1bbd" \
+                && REVISION=${REVISION%~*} \
+                && curl -f -L -O https://github.com/nginx/pkg-oss/archive/${REVISION}.tar.gz \
+                && PKGOSSCHECKSUM="72c13cfedc25a6c1e01c24dd1f736b0fefd1ef7f73ef569e2726fc99c0137327d2e71c8694bd8b0157be2a7247ec1769904746a852e7698caf7df8a5b0040440 *${REVISION}.tar.gz" \
+                && if [ "$(openssl sha512 -r ${REVISION}.tar.gz)" = "$PKGOSSCHECKSUM" ]; then \
+                    echo "pkg-oss tarball checksum verification succeeded!"; \
+                else \
+                    echo "pkg-oss tarball checksum verification failed!"; \
+                    exit 1; \
+                fi \
+                && tar xzvf ${REVISION}.tar.gz \
+                && cd pkg-oss-${REVISION} \
+                && cd debian \
+                && for target in base module-geoip module-image-filter module-njs module-xslt module-acme; do \
+                    make rules-$target; \
+                    mk-build-deps --install --tool="apt-get -o Debug::pkgProblemResolver=yes --no-install-recommends --yes" \
+                        debuild-$target/nginx-$NGINX_VERSION/debian/control; \
+                done \
+                && make base module-geoip module-image-filter module-njs module-xslt module-acme \
+            ) \
+# we don't remove APT lists here because they get re-downloaded and removed later
+            \
+# reset apt-mark's "manual" list so that "purge --auto-remove" will remove all build dependencies
+# (which is done after we install the built packages so we don't have to redownload any overlapping dependencies)
+            && apt-mark showmanual | xargs apt-mark auto > /dev/null \
+            && { [ -z "$savedAptMark" ] || apt-mark manual $savedAptMark; } \
+            \
+# create a temporary local APT repo to install from (so that dependency resolution can be handled by APT, as it should be)
+            && ls -lAFh "$tempDir" \
+            && ( cd "$tempDir" && dpkg-scanpackages . > Packages ) \
+            && grep '^Package: ' "$tempDir/Packages" \
+            && echo "deb [ trusted=yes ] file://$tempDir ./" > /etc/apt/sources.list.d/temp.list \
+# work around the following APT issue by using "Acquire::GzipIndexes=false" (overriding "/etc/apt/apt.conf.d/docker-gzip-indexes")
+#   Could not open file /var/lib/apt/lists/partial/_tmp_tmp.ODWljpQfkE_._Packages - open (13: Permission denied)
+#   ...
+#   E: Failed to fetch store:/var/lib/apt/lists/partial/_tmp_tmp.ODWljpQfkE_._Packages  Could not open file /var/lib/apt/lists/partial/_tmp_tmp.ODWljpQfkE_._Packages - open (13: Permission denied)
+            && apt-get -o Acquire::GzipIndexes=false update \
+            ;; \
+    esac \
+    \
+    && apt-get install --no-install-recommends --no-install-suggests -y \
+                        $nginxPackages \
+                        gettext-base \
+                        curl \
+    && apt-get remove --purge --auto-remove -y && rm -rf /var/lib/apt/lists/* /etc/apt/sources.list.d/nginx.list \
+    \
+# if we have leftovers from building, let's purge them (including extra, unnecessary build deps)
+    && if [ -n "$tempDir" ]; then \
+        apt-get purge -y --auto-remove \
+        && rm -rf "$tempDir" /etc/apt/sources.list.d/temp.list; \
+    fi \
+# forward request and error logs to docker log collector
+    && ln -sf /dev/stdout /var/log/nginx/access.log \
+    && ln -sf /dev/stderr /var/log/nginx/error.log \
+# create a docker-entrypoint.d directory
+    && mkdir /docker-entrypoint.d
+
+    ✗ HIGH CVE-2026-32740
+      https://scout.docker.com/v/CVE-2026-32740
+      Affected range : >0
+      Fixed version  : not fixed
+
+    ✗ HIGH CVE-2026-32882
+      https://scout.docker.com/v/CVE-2026-32882
+      Affected range : >0
+      Fixed version  : not fixed
+
+    ✗ HIGH CVE-2026-32741
+      https://scout.docker.com/v/CVE-2026-32741
+      Affected range : >0
+      Fixed version  : not fixed
+
+    ✗ MEDIUM CVE-2026-41069
+      https://scout.docker.com/v/CVE-2026-41069
+      Affected range : >0
+      Fixed version  : not fixed
+
+    ✗ MEDIUM CVE-2026-32814
+      https://scout.docker.com/v/CVE-2026-32814
+      Affected range : >0
+      Fixed version  : not fixed
+
+    ✗ MEDIUM CVE-2026-32739
+      https://scout.docker.com/v/CVE-2026-32739
+      Affected range : >0
+      Fixed version  : not fixed
+
+    ✗ MEDIUM CVE-2026-32738
+      https://scout.docker.com/v/CVE-2026-32738
+      Affected range : >0
+      Fixed version  : not fixed
+
+    ✗ MEDIUM CVE-2026-41071
+      https://scout.docker.com/v/CVE-2026-41071
+      Affected range : >0
+      Fixed version  : not fixed
+
+    ✗ LOW CVE-2026-3949
+      https://scout.docker.com/v/CVE-2026-3949
+      Affected range : >0
+      Fixed version  : not fixed
+
+
+   0C     2H     2M     2L     1?  perl 5.40.1-6
+pkg:deb/debian/perl@5.40.1-6?os_distro=trixie&os_name=debian&os_version=13
+
+mainline/debian/Dockerfile (0:0)
+
+
+    ✗ HIGH CVE-2026-48959
+      https://scout.docker.com/v/CVE-2026-48959
+      Affected range : >0
+      Fixed version  : not fixed
+
+    ✗ HIGH CVE-2026-48962
+      https://scout.docker.com/v/CVE-2026-48962
+      Affected range : >0
+      Fixed version  : not fixed
+
+    ✗ MEDIUM CVE-2026-7010
+      https://scout.docker.com/v/CVE-2026-7010
+      Affected range : >0
+      Fixed version  : not fixed
+
+    ✗ MEDIUM CVE-2025-15649
+      https://scout.docker.com/v/CVE-2025-15649
+      Affected range : >0
+      Fixed version  : not fixed
+
+    ✗ LOW CVE-2026-48961
+      https://scout.docker.com/v/CVE-2026-48961
+      Affected range : >0
+      Fixed version  : not fixed
+
+    ✗ LOW CVE-2011-4116
+      https://scout.docker.com/v/CVE-2011-4116
+      Affected range : >0
+      Fixed version  : not fixed
+
+    ✗ UNSPECIFIED CVE-2026-12087
+      https://scout.docker.com/v/CVE-2026-12087
+      Affected range : >0
+      Fixed version  : not fixed
+
+
+   0C     1H     1M     1L  libde265 1.0.15-1
+pkg:deb/debian/libde265@1.0.15-1?os_distro=trixie&os_name=debian&os_version=13
+
+mainline/debian/Dockerfile (17:136)
+RUN set -x \
+# create nginx user/group first, to be consistent throughout docker variants
+    && groupadd --system --gid 101 nginx \
+    && useradd --system --gid nginx --no-create-home --home /nonexistent --comment "nginx user" --shell /bin/false --uid 101 nginx \
+    && apt-get update \
+    && apt-get install --no-install-recommends --no-install-suggests -y gnupg1 ca-certificates \
+    && \
+    NGINX_GPGKEYS="573BFD6B3D8FBC641079A6ABABF5BD827BD9BF62 8540A6F18833A80E9C1653A42FD21310B49F6B46 9E9BE90EACBCDE69FE9B204CBCDCD8A38D88A2B3"; \
+    NGINX_GPGKEY_PATH=/etc/apt/keyrings/nginx-archive-keyring.gpg; \
+    export GNUPGHOME="$(mktemp -d)"; \
+    found=''; \
+    for NGINX_GPGKEY in $NGINX_GPGKEYS; do \
+    for server in \
+        hkp://keyserver.ubuntu.com:80 \
+        pgp.mit.edu \
+    ; do \
+        echo "Fetching GPG key $NGINX_GPGKEY from $server"; \
+        gpg1 --batch --keyserver "$server" --keyserver-options timeout=10 --recv-keys "$NGINX_GPGKEY" && found=yes && break; \
+    done; \
+    test -z "$found" && echo >&2 "error: failed to fetch GPG key $NGINX_GPGKEY" && exit 1; \
+    done; \
+    gpg1 --batch --export $NGINX_GPGKEYS > "$NGINX_GPGKEY_PATH" ; \
+    rm -rf "$GNUPGHOME"; \
+    apt-get remove --purge --auto-remove -y gnupg1 && rm -rf /var/lib/apt/lists/* \
+    && dpkgArch="$(dpkg --print-architecture)" \
+    && nginxPackages=" \
+        nginx=${NGINX_VERSION}-${PKG_RELEASE} \
+        nginx-module-xslt=${NGINX_VERSION}-${DYNPKG_RELEASE} \
+        nginx-module-geoip=${NGINX_VERSION}-${DYNPKG_RELEASE} \
+        nginx-module-image-filter=${NGINX_VERSION}-${DYNPKG_RELEASE} \
+        nginx-module-njs=${NGINX_VERSION}+${NJS_VERSION}-${NJS_RELEASE} \
+        nginx-module-acme=${NGINX_VERSION}+${ACME_VERSION}-${PKG_RELEASE} \
+    " \
+    && case "$dpkgArch" in \
+        amd64|arm64) \
+# arches officialy built by upstream
+            echo "deb [signed-by=$NGINX_GPGKEY_PATH] https://nginx.org/packages/mainline/debian/ trixie nginx" >> /etc/apt/sources.list.d/nginx.list \
+            && apt-get update \
+            ;; \
+        *) \
+# we're on an architecture upstream doesn't officially build for
+# let's build binaries from the published packaging sources
+# new directory for storing sources and .deb files
+            tempDir="$(mktemp -d)" \
+            && chmod 777 "$tempDir" \
+# (777 to ensure APT's "_apt" user can access it too)
+            \
+# save list of currently-installed packages so build dependencies can be cleanly removed later
+            && savedAptMark="$(apt-mark showmanual)" \
+            \
+# build .deb files from upstream's packaging sources
+            && apt-get update \
+            && apt-get install --no-install-recommends --no-install-suggests -y \
+                cargo \
+                curl \
+                devscripts \
+                equivs \
+                git \
+                libxml2-utils \
+                lsb-release \
+                xsltproc \
+            && ( \
+                cd "$tempDir" \
+                && export CARGO_HOME="$tempDir/.cargo" \
+                && REVISION="b151aac903a6fc121d57f0909415381d0a1c1bbd" \
+                && REVISION=${REVISION%~*} \
+                && curl -f -L -O https://github.com/nginx/pkg-oss/archive/${REVISION}.tar.gz \
+                && PKGOSSCHECKSUM="72c13cfedc25a6c1e01c24dd1f736b0fefd1ef7f73ef569e2726fc99c0137327d2e71c8694bd8b0157be2a7247ec1769904746a852e7698caf7df8a5b0040440 *${REVISION}.tar.gz" \
+                && if [ "$(openssl sha512 -r ${REVISION}.tar.gz)" = "$PKGOSSCHECKSUM" ]; then \
+                    echo "pkg-oss tarball checksum verification succeeded!"; \
+                else \
+                    echo "pkg-oss tarball checksum verification failed!"; \
+                    exit 1; \
+                fi \
+                && tar xzvf ${REVISION}.tar.gz \
+                && cd pkg-oss-${REVISION} \
+                && cd debian \
+                && for target in base module-geoip module-image-filter module-njs module-xslt module-acme; do \
+                    make rules-$target; \
+                    mk-build-deps --install --tool="apt-get -o Debug::pkgProblemResolver=yes --no-install-recommends --yes" \
+                        debuild-$target/nginx-$NGINX_VERSION/debian/control; \
+                done \
+                && make base module-geoip module-image-filter module-njs module-xslt module-acme \
+            ) \
+# we don't remove APT lists here because they get re-downloaded and removed later
+            \
+# reset apt-mark's "manual" list so that "purge --auto-remove" will remove all build dependencies
+# (which is done after we install the built packages so we don't have to redownload any overlapping dependencies)
+            && apt-mark showmanual | xargs apt-mark auto > /dev/null \
+            && { [ -z "$savedAptMark" ] || apt-mark manual $savedAptMark; } \
+            \
+# create a temporary local APT repo to install from (so that dependency resolution can be handled by APT, as it should be)
+            && ls -lAFh "$tempDir" \
+            && ( cd "$tempDir" && dpkg-scanpackages . > Packages ) \
+            && grep '^Package: ' "$tempDir/Packages" \
+            && echo "deb [ trusted=yes ] file://$tempDir ./" > /etc/apt/sources.list.d/temp.list \
+# work around the following APT issue by using "Acquire::GzipIndexes=false" (overriding "/etc/apt/apt.conf.d/docker-gzip-indexes")
+#   Could not open file /var/lib/apt/lists/partial/_tmp_tmp.ODWljpQfkE_._Packages - open (13: Permission denied)
+#   ...
+#   E: Failed to fetch store:/var/lib/apt/lists/partial/_tmp_tmp.ODWljpQfkE_._Packages  Could not open file /var/lib/apt/lists/partial/_tmp_tmp.ODWljpQfkE_._Packages - open (13: Permission denied)
+            && apt-get -o Acquire::GzipIndexes=false update \
+            ;; \
+    esac \
+    \
+    && apt-get install --no-install-recommends --no-install-suggests -y \
+                        $nginxPackages \
+                        gettext-base \
+                        curl \
+    && apt-get remove --purge --auto-remove -y && rm -rf /var/lib/apt/lists/* /etc/apt/sources.list.d/nginx.list \
+    \
+# if we have leftovers from building, let's purge them (including extra, unnecessary build deps)
+    && if [ -n "$tempDir" ]; then \
+        apt-get purge -y --auto-remove \
+        && rm -rf "$tempDir" /etc/apt/sources.list.d/temp.list; \
+    fi \
+# forward request and error logs to docker log collector
+    && ln -sf /dev/stdout /var/log/nginx/access.log \
+    && ln -sf /dev/stderr /var/log/nginx/error.log \
+# create a docker-entrypoint.d directory
+    && mkdir /docker-entrypoint.d
+
+    ✗ HIGH CVE-2026-33164
+      https://scout.docker.com/v/CVE-2026-33164
+      Affected range : >0
+      Fixed version  : not fixed
+
+    ✗ MEDIUM CVE-2026-33165
+      https://scout.docker.com/v/CVE-2026-33165
+      Affected range : >0
+      Fixed version  : not fixed
+
+    ✗ LOW CVE-2025-61147
+      https://scout.docker.com/v/CVE-2025-61147
+      Affected range : >0
+      Fixed version  : not fixed
+
+
+   0C     0H     1M     1L  tar 1.35+dfsg-3.1
+pkg:deb/debian/tar@1.35%2Bdfsg-3.1?os_distro=trixie&os_name=debian&os_version=13
+
+mainline/debian/Dockerfile (0:0)
+
+
+    ✗ MEDIUM CVE-2025-45582
+      https://scout.docker.com/v/CVE-2025-45582
+      Affected range : >=1.35+dfsg-3.1
+      Fixed version  : not fixed
+
+    ✗ LOW CVE-2005-2541
+      https://scout.docker.com/v/CVE-2005-2541
+      Affected range : >0
+      Fixed version  : not fixed
+
+
+   0C     0H     1M     1L  expat 2.7.1-2
+pkg:deb/debian/expat@2.7.1-2?os_distro=trixie&os_name=debian&os_version=13
+
+mainline/debian/Dockerfile (17:136)
+RUN set -x \
+# create nginx user/group first, to be consistent throughout docker variants
+    && groupadd --system --gid 101 nginx \
+    && useradd --system --gid nginx --no-create-home --home /nonexistent --comment "nginx user" --shell /bin/false --uid 101 nginx \
+    && apt-get update \
+    && apt-get install --no-install-recommends --no-install-suggests -y gnupg1 ca-certificates \
+    && \
+    NGINX_GPGKEYS="573BFD6B3D8FBC641079A6ABABF5BD827BD9BF62 8540A6F18833A80E9C1653A42FD21310B49F6B46 9E9BE90EACBCDE69FE9B204CBCDCD8A38D88A2B3"; \
+    NGINX_GPGKEY_PATH=/etc/apt/keyrings/nginx-archive-keyring.gpg; \
+    export GNUPGHOME="$(mktemp -d)"; \
+    found=''; \
+    for NGINX_GPGKEY in $NGINX_GPGKEYS; do \
+    for server in \
+        hkp://keyserver.ubuntu.com:80 \
+        pgp.mit.edu \
+    ; do \
+        echo "Fetching GPG key $NGINX_GPGKEY from $server"; \
+        gpg1 --batch --keyserver "$server" --keyserver-options timeout=10 --recv-keys "$NGINX_GPGKEY" && found=yes && break; \
+    done; \
+    test -z "$found" && echo >&2 "error: failed to fetch GPG key $NGINX_GPGKEY" && exit 1; \
+    done; \
+    gpg1 --batch --export $NGINX_GPGKEYS > "$NGINX_GPGKEY_PATH" ; \
+    rm -rf "$GNUPGHOME"; \
+    apt-get remove --purge --auto-remove -y gnupg1 && rm -rf /var/lib/apt/lists/* \
+    && dpkgArch="$(dpkg --print-architecture)" \
+    && nginxPackages=" \
+        nginx=${NGINX_VERSION}-${PKG_RELEASE} \
+        nginx-module-xslt=${NGINX_VERSION}-${DYNPKG_RELEASE} \
+        nginx-module-geoip=${NGINX_VERSION}-${DYNPKG_RELEASE} \
+        nginx-module-image-filter=${NGINX_VERSION}-${DYNPKG_RELEASE} \
+        nginx-module-njs=${NGINX_VERSION}+${NJS_VERSION}-${NJS_RELEASE} \
+        nginx-module-acme=${NGINX_VERSION}+${ACME_VERSION}-${PKG_RELEASE} \
+    " \
+    && case "$dpkgArch" in \
+        amd64|arm64) \
+# arches officialy built by upstream
+            echo "deb [signed-by=$NGINX_GPGKEY_PATH] https://nginx.org/packages/mainline/debian/ trixie nginx" >> /etc/apt/sources.list.d/nginx.list \
+            && apt-get update \
+            ;; \
+        *) \
+# we're on an architecture upstream doesn't officially build for
+# let's build binaries from the published packaging sources
+# new directory for storing sources and .deb files
+            tempDir="$(mktemp -d)" \
+            && chmod 777 "$tempDir" \
+# (777 to ensure APT's "_apt" user can access it too)
+            \
+# save list of currently-installed packages so build dependencies can be cleanly removed later
+            && savedAptMark="$(apt-mark showmanual)" \
+            \
+# build .deb files from upstream's packaging sources
+            && apt-get update \
+            && apt-get install --no-install-recommends --no-install-suggests -y \
+                cargo \
+                curl \
+                devscripts \
+                equivs \
+                git \
+                libxml2-utils \
+                lsb-release \
+                xsltproc \
+            && ( \
+                cd "$tempDir" \
+                && export CARGO_HOME="$tempDir/.cargo" \
+                && REVISION="b151aac903a6fc121d57f0909415381d0a1c1bbd" \
+                && REVISION=${REVISION%~*} \
+                && curl -f -L -O https://github.com/nginx/pkg-oss/archive/${REVISION}.tar.gz \
+                && PKGOSSCHECKSUM="72c13cfedc25a6c1e01c24dd1f736b0fefd1ef7f73ef569e2726fc99c0137327d2e71c8694bd8b0157be2a7247ec1769904746a852e7698caf7df8a5b0040440 *${REVISION}.tar.gz" \
+                && if [ "$(openssl sha512 -r ${REVISION}.tar.gz)" = "$PKGOSSCHECKSUM" ]; then \
+                    echo "pkg-oss tarball checksum verification succeeded!"; \
+                else \
+                    echo "pkg-oss tarball checksum verification failed!"; \
+                    exit 1; \
+                fi \
+                && tar xzvf ${REVISION}.tar.gz \
+                && cd pkg-oss-${REVISION} \
+                && cd debian \
+                && for target in base module-geoip module-image-filter module-njs module-xslt module-acme; do \
+                    make rules-$target; \
+                    mk-build-deps --install --tool="apt-get -o Debug::pkgProblemResolver=yes --no-install-recommends --yes" \
+                        debuild-$target/nginx-$NGINX_VERSION/debian/control; \
+                done \
+                && make base module-geoip module-image-filter module-njs module-xslt module-acme \
+            ) \
+# we don't remove APT lists here because they get re-downloaded and removed later
+            \
+# reset apt-mark's "manual" list so that "purge --auto-remove" will remove all build dependencies
+# (which is done after we install the built packages so we don't have to redownload any overlapping dependencies)
+            && apt-mark showmanual | xargs apt-mark auto > /dev/null \
+            && { [ -z "$savedAptMark" ] || apt-mark manual $savedAptMark; } \
+            \
+# create a temporary local APT repo to install from (so that dependency resolution can be handled by APT, as it should be)
+            && ls -lAFh "$tempDir" \
+            && ( cd "$tempDir" && dpkg-scanpackages . > Packages ) \
+            && grep '^Package: ' "$tempDir/Packages" \
+            && echo "deb [ trusted=yes ] file://$tempDir ./" > /etc/apt/sources.list.d/temp.list \
+# work around the following APT issue by using "Acquire::GzipIndexes=false" (overriding "/etc/apt/apt.conf.d/docker-gzip-indexes")
+#   Could not open file /var/lib/apt/lists/partial/_tmp_tmp.ODWljpQfkE_._Packages - open (13: Permission denied)
+#   ...
+#   E: Failed to fetch store:/var/lib/apt/lists/partial/_tmp_tmp.ODWljpQfkE_._Packages  Could not open file /var/lib/apt/lists/partial/_tmp_tmp.ODWljpQfkE_._Packages - open (13: Permission denied)
+            && apt-get -o Acquire::GzipIndexes=false update \
+            ;; \
+    esac \
+    \
+    && apt-get install --no-install-recommends --no-install-suggests -y \
+                        $nginxPackages \
+                        gettext-base \
+                        curl \
+    && apt-get remove --purge --auto-remove -y && rm -rf /var/lib/apt/lists/* /etc/apt/sources.list.d/nginx.list \
+    \
+# if we have leftovers from building, let's purge them (including extra, unnecessary build deps)
+    && if [ -n "$tempDir" ]; then \
+        apt-get purge -y --auto-remove \
+        && rm -rf "$tempDir" /etc/apt/sources.list.d/temp.list; \
+    fi \
+# forward request and error logs to docker log collector
+    && ln -sf /dev/stdout /var/log/nginx/access.log \
+    && ln -sf /dev/stderr /var/log/nginx/error.log \
+# create a docker-entrypoint.d directory
+    && mkdir /docker-entrypoint.d
+
+    ✗ MEDIUM CVE-2026-50219
+      https://scout.docker.com/v/CVE-2026-50219
+      Affected range : >0
+      Fixed version  : not fixed
+
+    ✗ LOW CVE-2026-45186
+      https://scout.docker.com/v/CVE-2026-45186
+      Affected range : >0
+      Fixed version  : not fixed
+
+
+   0C     0H     1M     0L  pam 1.7.0-5
+pkg:deb/debian/pam@1.7.0-5?os_distro=trixie&os_name=debian&os_version=13
+
+mainline/debian/Dockerfile (0:0)
+
+
+    ✗ MEDIUM CVE-2026-54411
+      https://scout.docker.com/v/CVE-2026-54411
+      Affected range : >0
+      Fixed version  : not fixed
+
+
+   0C     0H     0M    11L  tiff 4.7.0-3+deb13u2
+pkg:deb/debian/tiff@4.7.0-3%2Bdeb13u2?os_distro=trixie&os_name=debian&os_version=13
+
+mainline/debian/Dockerfile (17:136)
+RUN set -x \
+# create nginx user/group first, to be consistent throughout docker variants
+    && groupadd --system --gid 101 nginx \
+    && useradd --system --gid nginx --no-create-home --home /nonexistent --comment "nginx user" --shell /bin/false --uid 101 nginx \
+    && apt-get update \
+    && apt-get install --no-install-recommends --no-install-suggests -y gnupg1 ca-certificates \
+    && \
+    NGINX_GPGKEYS="573BFD6B3D8FBC641079A6ABABF5BD827BD9BF62 8540A6F18833A80E9C1653A42FD21310B49F6B46 9E9BE90EACBCDE69FE9B204CBCDCD8A38D88A2B3"; \
+    NGINX_GPGKEY_PATH=/etc/apt/keyrings/nginx-archive-keyring.gpg; \
+    export GNUPGHOME="$(mktemp -d)"; \
+    found=''; \
+    for NGINX_GPGKEY in $NGINX_GPGKEYS; do \
+    for server in \
+        hkp://keyserver.ubuntu.com:80 \
+        pgp.mit.edu \
+    ; do \
+        echo "Fetching GPG key $NGINX_GPGKEY from $server"; \
+        gpg1 --batch --keyserver "$server" --keyserver-options timeout=10 --recv-keys "$NGINX_GPGKEY" && found=yes && break; \
+    done; \
+    test -z "$found" && echo >&2 "error: failed to fetch GPG key $NGINX_GPGKEY" && exit 1; \
+    done; \
+    gpg1 --batch --export $NGINX_GPGKEYS > "$NGINX_GPGKEY_PATH" ; \
+    rm -rf "$GNUPGHOME"; \
+    apt-get remove --purge --auto-remove -y gnupg1 && rm -rf /var/lib/apt/lists/* \
+    && dpkgArch="$(dpkg --print-architecture)" \
+    && nginxPackages=" \
+        nginx=${NGINX_VERSION}-${PKG_RELEASE} \
+        nginx-module-xslt=${NGINX_VERSION}-${DYNPKG_RELEASE} \
+        nginx-module-geoip=${NGINX_VERSION}-${DYNPKG_RELEASE} \
+        nginx-module-image-filter=${NGINX_VERSION}-${DYNPKG_RELEASE} \
+        nginx-module-njs=${NGINX_VERSION}+${NJS_VERSION}-${NJS_RELEASE} \
+        nginx-module-acme=${NGINX_VERSION}+${ACME_VERSION}-${PKG_RELEASE} \
+    " \
+    && case "$dpkgArch" in \
+        amd64|arm64) \
+# arches officialy built by upstream
+            echo "deb [signed-by=$NGINX_GPGKEY_PATH] https://nginx.org/packages/mainline/debian/ trixie nginx" >> /etc/apt/sources.list.d/nginx.list \
+            && apt-get update \
+            ;; \
+        *) \
+# we're on an architecture upstream doesn't officially build for
+# let's build binaries from the published packaging sources
+# new directory for storing sources and .deb files
+            tempDir="$(mktemp -d)" \
+            && chmod 777 "$tempDir" \
+# (777 to ensure APT's "_apt" user can access it too)
+            \
+# save list of currently-installed packages so build dependencies can be cleanly removed later
+            && savedAptMark="$(apt-mark showmanual)" \
+            \
+# build .deb files from upstream's packaging sources
+            && apt-get update \
+            && apt-get install --no-install-recommends --no-install-suggests -y \
+                cargo \
+                curl \
+                devscripts \
+                equivs \
+                git \
+                libxml2-utils \
+                lsb-release \
+                xsltproc \
+            && ( \
+                cd "$tempDir" \
+                && export CARGO_HOME="$tempDir/.cargo" \
+                && REVISION="b151aac903a6fc121d57f0909415381d0a1c1bbd" \
+                && REVISION=${REVISION%~*} \
+                && curl -f -L -O https://github.com/nginx/pkg-oss/archive/${REVISION}.tar.gz \
+                && PKGOSSCHECKSUM="72c13cfedc25a6c1e01c24dd1f736b0fefd1ef7f73ef569e2726fc99c0137327d2e71c8694bd8b0157be2a7247ec1769904746a852e7698caf7df8a5b0040440 *${REVISION}.tar.gz" \
+                && if [ "$(openssl sha512 -r ${REVISION}.tar.gz)" = "$PKGOSSCHECKSUM" ]; then \
+                    echo "pkg-oss tarball checksum verification succeeded!"; \
+                else \
+                    echo "pkg-oss tarball checksum verification failed!"; \
+                    exit 1; \
+                fi \
+                && tar xzvf ${REVISION}.tar.gz \
+                && cd pkg-oss-${REVISION} \
+                && cd debian \
+                && for target in base module-geoip module-image-filter module-njs module-xslt module-acme; do \
+                    make rules-$target; \
+                    mk-build-deps --install --tool="apt-get -o Debug::pkgProblemResolver=yes --no-install-recommends --yes" \
+                        debuild-$target/nginx-$NGINX_VERSION/debian/control; \
+                done \
+                && make base module-geoip module-image-filter module-njs module-xslt module-acme \
+            ) \
+# we don't remove APT lists here because they get re-downloaded and removed later
+            \
+# reset apt-mark's "manual" list so that "purge --auto-remove" will remove all build dependencies
+# (which is done after we install the built packages so we don't have to redownload any overlapping dependencies)
+            && apt-mark showmanual | xargs apt-mark auto > /dev/null \
+            && { [ -z "$savedAptMark" ] || apt-mark manual $savedAptMark; } \
+            \
+# create a temporary local APT repo to install from (so that dependency resolution can be handled by APT, as it should be)
+            && ls -lAFh "$tempDir" \
+            && ( cd "$tempDir" && dpkg-scanpackages . > Packages ) \
+            && grep '^Package: ' "$tempDir/Packages" \
+            && echo "deb [ trusted=yes ] file://$tempDir ./" > /etc/apt/sources.list.d/temp.list \
+# work around the following APT issue by using "Acquire::GzipIndexes=false" (overriding "/etc/apt/apt.conf.d/docker-gzip-indexes")
+#   Could not open file /var/lib/apt/lists/partial/_tmp_tmp.ODWljpQfkE_._Packages - open (13: Permission denied)
+#   ...
+#   E: Failed to fetch store:/var/lib/apt/lists/partial/_tmp_tmp.ODWljpQfkE_._Packages  Could not open file /var/lib/apt/lists/partial/_tmp_tmp.ODWljpQfkE_._Packages - open (13: Permission denied)
+            && apt-get -o Acquire::GzipIndexes=false update \
+            ;; \
+    esac \
+    \
+    && apt-get install --no-install-recommends --no-install-suggests -y \
+                        $nginxPackages \
+                        gettext-base \
+                        curl \
+    && apt-get remove --purge --auto-remove -y && rm -rf /var/lib/apt/lists/* /etc/apt/sources.list.d/nginx.list \
+    \
+# if we have leftovers from building, let's purge them (including extra, unnecessary build deps)
+    && if [ -n "$tempDir" ]; then \
+        apt-get purge -y --auto-remove \
+        && rm -rf "$tempDir" /etc/apt/sources.list.d/temp.list; \
+    fi \
+# forward request and error logs to docker log collector
+    && ln -sf /dev/stdout /var/log/nginx/access.log \
+    && ln -sf /dev/stderr /var/log/nginx/error.log \
+# create a docker-entrypoint.d directory
+    && mkdir /docker-entrypoint.d
+
+    ✗ LOW CVE-2025-8534
+      https://scout.docker.com/v/CVE-2025-8534
+      Affected range : >0
+      Fixed version  : not fixed
+
+    ✗ LOW CVE-2025-8177
+      https://scout.docker.com/v/CVE-2025-8177
+      Affected range : >0
+      Fixed version  : not fixed
+
+    ✗ LOW CVE-2025-8176
+      https://scout.docker.com/v/CVE-2025-8176
+      Affected range : >0
+      Fixed version  : not fixed
+
+    ✗ LOW CVE-2025-61145
+      https://scout.docker.com/v/CVE-2025-61145
+      Affected range : >0
+      Fixed version  : not fixed
+
+    ✗ LOW CVE-2025-61144
+      https://scout.docker.com/v/CVE-2025-61144
+      Affected range : >0
+      Fixed version  : not fixed
+
+    ✗ LOW CVE-2025-61143
+      https://scout.docker.com/v/CVE-2025-61143
+      Affected range : >0
+      Fixed version  : not fixed
+
+    ✗ LOW CVE-2024-6716
+      https://scout.docker.com/v/CVE-2024-6716
+      Affected range : >=4.5.1+git230720-5
+      Fixed version  : not fixed
+
+    ✗ LOW CVE-2022-1210
+      https://scout.docker.com/v/CVE-2022-1210
+      Affected range : >0
+      Fixed version  : not fixed
+
+    ✗ LOW CVE-2018-10126
+      https://scout.docker.com/v/CVE-2018-10126
+      Affected range : >0
+      Fixed version  : not fixed
+
+    ✗ LOW CVE-2017-17973
+      https://scout.docker.com/v/CVE-2017-17973
+      Affected range : >=4.7.0-3
+      Fixed version  : not fixed
+
+    ✗ LOW CVE-2017-16232
+      https://scout.docker.com/v/CVE-2017-16232
+      Affected range : >0
+      Fixed version  : not fixed
+
+
+   0C     0H     0M     7L  glibc 2.41-12+deb13u3
+pkg:deb/debian/glibc@2.41-12%2Bdeb13u3?os_distro=trixie&os_name=debian&os_version=13
+
+mainline/debian/Dockerfile (0:0)
+
+
+    ✗ LOW CVE-2019-9192
+      https://scout.docker.com/v/CVE-2019-9192
+      Affected range : >0
+      Fixed version  : not fixed
+
+    ✗ LOW CVE-2019-1010025
+      https://scout.docker.com/v/CVE-2019-1010025
+      Affected range : >0
+      Fixed version  : not fixed
+
+    ✗ LOW CVE-2019-1010024
+      https://scout.docker.com/v/CVE-2019-1010024
+      Affected range : >0
+      Fixed version  : not fixed
+
+    ✗ LOW CVE-2019-1010023
+      https://scout.docker.com/v/CVE-2019-1010023
+      Affected range : >0
+      Fixed version  : not fixed
+
+    ✗ LOW CVE-2019-1010022
+      https://scout.docker.com/v/CVE-2019-1010022
+      Affected range : >0
+      Fixed version  : not fixed
+
+    ✗ LOW CVE-2018-20796
+      https://scout.docker.com/v/CVE-2018-20796
+      Affected range : >0
+      Fixed version  : not fixed
+
+    ✗ LOW CVE-2010-4756
+      https://scout.docker.com/v/CVE-2010-4756
+      Affected range : >0
+      Fixed version  : not fixed
+
+
+   0C     0H     0M     5L  openldap 2.6.10+dfsg-1
+pkg:deb/debian/openldap@2.6.10%2Bdfsg-1?os_distro=trixie&os_name=debian&os_version=13
+
+mainline/debian/Dockerfile (17:136)
+RUN set -x \
+# create nginx user/group first, to be consistent throughout docker variants
+    && groupadd --system --gid 101 nginx \
+    && useradd --system --gid nginx --no-create-home --home /nonexistent --comment "nginx user" --shell /bin/false --uid 101 nginx \
+    && apt-get update \
+    && apt-get install --no-install-recommends --no-install-suggests -y gnupg1 ca-certificates \
+    && \
+    NGINX_GPGKEYS="573BFD6B3D8FBC641079A6ABABF5BD827BD9BF62 8540A6F18833A80E9C1653A42FD21310B49F6B46 9E9BE90EACBCDE69FE9B204CBCDCD8A38D88A2B3"; \
+    NGINX_GPGKEY_PATH=/etc/apt/keyrings/nginx-archive-keyring.gpg; \
+    export GNUPGHOME="$(mktemp -d)"; \
+    found=''; \
+    for NGINX_GPGKEY in $NGINX_GPGKEYS; do \
+    for server in \
+        hkp://keyserver.ubuntu.com:80 \
+        pgp.mit.edu \
+    ; do \
+        echo "Fetching GPG key $NGINX_GPGKEY from $server"; \
+        gpg1 --batch --keyserver "$server" --keyserver-options timeout=10 --recv-keys "$NGINX_GPGKEY" && found=yes && break; \
+    done; \
+    test -z "$found" && echo >&2 "error: failed to fetch GPG key $NGINX_GPGKEY" && exit 1; \
+    done; \
+    gpg1 --batch --export $NGINX_GPGKEYS > "$NGINX_GPGKEY_PATH" ; \
+    rm -rf "$GNUPGHOME"; \
+    apt-get remove --purge --auto-remove -y gnupg1 && rm -rf /var/lib/apt/lists/* \
+    && dpkgArch="$(dpkg --print-architecture)" \
+    && nginxPackages=" \
+        nginx=${NGINX_VERSION}-${PKG_RELEASE} \
+        nginx-module-xslt=${NGINX_VERSION}-${DYNPKG_RELEASE} \
+        nginx-module-geoip=${NGINX_VERSION}-${DYNPKG_RELEASE} \
+        nginx-module-image-filter=${NGINX_VERSION}-${DYNPKG_RELEASE} \
+        nginx-module-njs=${NGINX_VERSION}+${NJS_VERSION}-${NJS_RELEASE} \
+        nginx-module-acme=${NGINX_VERSION}+${ACME_VERSION}-${PKG_RELEASE} \
+    " \
+    && case "$dpkgArch" in \
+        amd64|arm64) \
+# arches officialy built by upstream
+            echo "deb [signed-by=$NGINX_GPGKEY_PATH] https://nginx.org/packages/mainline/debian/ trixie nginx" >> /etc/apt/sources.list.d/nginx.list \
+            && apt-get update \
+            ;; \
+        *) \
+# we're on an architecture upstream doesn't officially build for
+# let's build binaries from the published packaging sources
+# new directory for storing sources and .deb files
+            tempDir="$(mktemp -d)" \
+            && chmod 777 "$tempDir" \
+# (777 to ensure APT's "_apt" user can access it too)
+            \
+# save list of currently-installed packages so build dependencies can be cleanly removed later
+            && savedAptMark="$(apt-mark showmanual)" \
+            \
+# build .deb files from upstream's packaging sources
+            && apt-get update \
+            && apt-get install --no-install-recommends --no-install-suggests -y \
+                cargo \
+                curl \
+                devscripts \
+                equivs \
+                git \
+                libxml2-utils \
+                lsb-release \
+                xsltproc \
+            && ( \
+                cd "$tempDir" \
+                && export CARGO_HOME="$tempDir/.cargo" \
+                && REVISION="b151aac903a6fc121d57f0909415381d0a1c1bbd" \
+                && REVISION=${REVISION%~*} \
+                && curl -f -L -O https://github.com/nginx/pkg-oss/archive/${REVISION}.tar.gz \
+                && PKGOSSCHECKSUM="72c13cfedc25a6c1e01c24dd1f736b0fefd1ef7f73ef569e2726fc99c0137327d2e71c8694bd8b0157be2a7247ec1769904746a852e7698caf7df8a5b0040440 *${REVISION}.tar.gz" \
+                && if [ "$(openssl sha512 -r ${REVISION}.tar.gz)" = "$PKGOSSCHECKSUM" ]; then \
+                    echo "pkg-oss tarball checksum verification succeeded!"; \
+                else \
+                    echo "pkg-oss tarball checksum verification failed!"; \
+                    exit 1; \
+                fi \
+                && tar xzvf ${REVISION}.tar.gz \
+                && cd pkg-oss-${REVISION} \
+                && cd debian \
+                && for target in base module-geoip module-image-filter module-njs module-xslt module-acme; do \
+                    make rules-$target; \
+                    mk-build-deps --install --tool="apt-get -o Debug::pkgProblemResolver=yes --no-install-recommends --yes" \
+                        debuild-$target/nginx-$NGINX_VERSION/debian/control; \
+                done \
+                && make base module-geoip module-image-filter module-njs module-xslt module-acme \
+            ) \
+# we don't remove APT lists here because they get re-downloaded and removed later
+            \
+# reset apt-mark's "manual" list so that "purge --auto-remove" will remove all build dependencies
+# (which is done after we install the built packages so we don't have to redownload any overlapping dependencies)
+            && apt-mark showmanual | xargs apt-mark auto > /dev/null \
+            && { [ -z "$savedAptMark" ] || apt-mark manual $savedAptMark; } \
+            \
+# create a temporary local APT repo to install from (so that dependency resolution can be handled by APT, as it should be)
+            && ls -lAFh "$tempDir" \
+            && ( cd "$tempDir" && dpkg-scanpackages . > Packages ) \
+            && grep '^Package: ' "$tempDir/Packages" \
+            && echo "deb [ trusted=yes ] file://$tempDir ./" > /etc/apt/sources.list.d/temp.list \
+# work around the following APT issue by using "Acquire::GzipIndexes=false" (overriding "/etc/apt/apt.conf.d/docker-gzip-indexes")
+#   Could not open file /var/lib/apt/lists/partial/_tmp_tmp.ODWljpQfkE_._Packages - open (13: Permission denied)
+#   ...
+#   E: Failed to fetch store:/var/lib/apt/lists/partial/_tmp_tmp.ODWljpQfkE_._Packages  Could not open file /var/lib/apt/lists/partial/_tmp_tmp.ODWljpQfkE_._Packages - open (13: Permission denied)
+            && apt-get -o Acquire::GzipIndexes=false update \
+            ;; \
+    esac \
+    \
+    && apt-get install --no-install-recommends --no-install-suggests -y \
+                        $nginxPackages \
+                        gettext-base \
+                        curl \
+    && apt-get remove --purge --auto-remove -y && rm -rf /var/lib/apt/lists/* /etc/apt/sources.list.d/nginx.list \
+    \
+# if we have leftovers from building, let's purge them (including extra, unnecessary build deps)
+    && if [ -n "$tempDir" ]; then \
+        apt-get purge -y --auto-remove \
+        && rm -rf "$tempDir" /etc/apt/sources.list.d/temp.list; \
+    fi \
+# forward request and error logs to docker log collector
+    && ln -sf /dev/stdout /var/log/nginx/access.log \
+    && ln -sf /dev/stderr /var/log/nginx/error.log \
+# create a docker-entrypoint.d directory
+    && mkdir /docker-entrypoint.d
+
+    ✗ LOW CVE-2026-22185
+      https://scout.docker.com/v/CVE-2026-22185
+      Affected range : >0
+      Fixed version  : not fixed
+
+    ✗ LOW CVE-2020-15719
+      https://scout.docker.com/v/CVE-2020-15719
+      Affected range : >0
+      Fixed version  : not fixed
+
+    ✗ LOW CVE-2017-17740
+      https://scout.docker.com/v/CVE-2017-17740
+      Affected range : >0
+      Fixed version  : not fixed
+
+    ✗ LOW CVE-2017-14159
+      https://scout.docker.com/v/CVE-2017-14159
+      Affected range : >0
+      Fixed version  : not fixed
+
+    ✗ LOW CVE-2015-3276
+      https://scout.docker.com/v/CVE-2015-3276
+      Affected range : >0
+      Fixed version  : not fixed
+
+
+   0C     0H     0M     4L  systemd 257.13-1~deb13u1
+pkg:deb/debian/systemd@257.13-1~deb13u1?os_distro=trixie&os_name=debian&os_version=13
+
+mainline/debian/Dockerfile (0:0)
+
+
+    ✗ LOW CVE-2023-31439
+      https://scout.docker.com/v/CVE-2023-31439
+      Affected range : >0
+      Fixed version  : not fixed
+
+    ✗ LOW CVE-2023-31438
+      https://scout.docker.com/v/CVE-2023-31438
+      Affected range : >0
+      Fixed version  : not fixed
+
+    ✗ LOW CVE-2023-31437
+      https://scout.docker.com/v/CVE-2023-31437
+      Affected range : >0
+      Fixed version  : not fixed
+
+    ✗ LOW CVE-2013-4392
+      https://scout.docker.com/v/CVE-2013-4392
+      Affected range : >0
+      Fixed version  : not fixed
+
+
+   0C     0H     0M     4L  curl 8.14.1-2+deb13u3
+pkg:deb/debian/curl@8.14.1-2%2Bdeb13u3?os_distro=trixie&os_name=debian&os_version=13
+
+mainline/debian/Dockerfile (17:136)
+RUN set -x \
+# create nginx user/group first, to be consistent throughout docker variants
+    && groupadd --system --gid 101 nginx \
+    && useradd --system --gid nginx --no-create-home --home /nonexistent --comment "nginx user" --shell /bin/false --uid 101 nginx \
+    && apt-get update \
+    && apt-get install --no-install-recommends --no-install-suggests -y gnupg1 ca-certificates \
+    && \
+    NGINX_GPGKEYS="573BFD6B3D8FBC641079A6ABABF5BD827BD9BF62 8540A6F18833A80E9C1653A42FD21310B49F6B46 9E9BE90EACBCDE69FE9B204CBCDCD8A38D88A2B3"; \
+    NGINX_GPGKEY_PATH=/etc/apt/keyrings/nginx-archive-keyring.gpg; \
+    export GNUPGHOME="$(mktemp -d)"; \
+    found=''; \
+    for NGINX_GPGKEY in $NGINX_GPGKEYS; do \
+    for server in \
+        hkp://keyserver.ubuntu.com:80 \
+        pgp.mit.edu \
+    ; do \
+        echo "Fetching GPG key $NGINX_GPGKEY from $server"; \
+        gpg1 --batch --keyserver "$server" --keyserver-options timeout=10 --recv-keys "$NGINX_GPGKEY" && found=yes && break; \
+    done; \
+    test -z "$found" && echo >&2 "error: failed to fetch GPG key $NGINX_GPGKEY" && exit 1; \
+    done; \
+    gpg1 --batch --export $NGINX_GPGKEYS > "$NGINX_GPGKEY_PATH" ; \
+    rm -rf "$GNUPGHOME"; \
+    apt-get remove --purge --auto-remove -y gnupg1 && rm -rf /var/lib/apt/lists/* \
+    && dpkgArch="$(dpkg --print-architecture)" \
+    && nginxPackages=" \
+        nginx=${NGINX_VERSION}-${PKG_RELEASE} \
+        nginx-module-xslt=${NGINX_VERSION}-${DYNPKG_RELEASE} \
+        nginx-module-geoip=${NGINX_VERSION}-${DYNPKG_RELEASE} \
+        nginx-module-image-filter=${NGINX_VERSION}-${DYNPKG_RELEASE} \
+        nginx-module-njs=${NGINX_VERSION}+${NJS_VERSION}-${NJS_RELEASE} \
+        nginx-module-acme=${NGINX_VERSION}+${ACME_VERSION}-${PKG_RELEASE} \
+    " \
+    && case "$dpkgArch" in \
+        amd64|arm64) \
+# arches officialy built by upstream
+            echo "deb [signed-by=$NGINX_GPGKEY_PATH] https://nginx.org/packages/mainline/debian/ trixie nginx" >> /etc/apt/sources.list.d/nginx.list \
+            && apt-get update \
+            ;; \
+        *) \
+# we're on an architecture upstream doesn't officially build for
+# let's build binaries from the published packaging sources
+# new directory for storing sources and .deb files
+            tempDir="$(mktemp -d)" \
+            && chmod 777 "$tempDir" \
+# (777 to ensure APT's "_apt" user can access it too)
+            \
+# save list of currently-installed packages so build dependencies can be cleanly removed later
+            && savedAptMark="$(apt-mark showmanual)" \
+            \
+# build .deb files from upstream's packaging sources
+            && apt-get update \
+            && apt-get install --no-install-recommends --no-install-suggests -y \
+                cargo \
+                curl \
+                devscripts \
+                equivs \
+                git \
+                libxml2-utils \
+                lsb-release \
+                xsltproc \
+            && ( \
+                cd "$tempDir" \
+                && export CARGO_HOME="$tempDir/.cargo" \
+                && REVISION="b151aac903a6fc121d57f0909415381d0a1c1bbd" \
+                && REVISION=${REVISION%~*} \
+                && curl -f -L -O https://github.com/nginx/pkg-oss/archive/${REVISION}.tar.gz \
+                && PKGOSSCHECKSUM="72c13cfedc25a6c1e01c24dd1f736b0fefd1ef7f73ef569e2726fc99c0137327d2e71c8694bd8b0157be2a7247ec1769904746a852e7698caf7df8a5b0040440 *${REVISION}.tar.gz" \
+                && if [ "$(openssl sha512 -r ${REVISION}.tar.gz)" = "$PKGOSSCHECKSUM" ]; then \
+                    echo "pkg-oss tarball checksum verification succeeded!"; \
+                else \
+                    echo "pkg-oss tarball checksum verification failed!"; \
+                    exit 1; \
+                fi \
+                && tar xzvf ${REVISION}.tar.gz \
+                && cd pkg-oss-${REVISION} \
+                && cd debian \
+                && for target in base module-geoip module-image-filter module-njs module-xslt module-acme; do \
+                    make rules-$target; \
+                    mk-build-deps --install --tool="apt-get -o Debug::pkgProblemResolver=yes --no-install-recommends --yes" \
+                        debuild-$target/nginx-$NGINX_VERSION/debian/control; \
+                done \
+                && make base module-geoip module-image-filter module-njs module-xslt module-acme \
+            ) \
+# we don't remove APT lists here because they get re-downloaded and removed later
+            \
+# reset apt-mark's "manual" list so that "purge --auto-remove" will remove all build dependencies
+# (which is done after we install the built packages so we don't have to redownload any overlapping dependencies)
+            && apt-mark showmanual | xargs apt-mark auto > /dev/null \
+            && { [ -z "$savedAptMark" ] || apt-mark manual $savedAptMark; } \
+            \
+# create a temporary local APT repo to install from (so that dependency resolution can be handled by APT, as it should be)
+            && ls -lAFh "$tempDir" \
+            && ( cd "$tempDir" && dpkg-scanpackages . > Packages ) \
+            && grep '^Package: ' "$tempDir/Packages" \
+            && echo "deb [ trusted=yes ] file://$tempDir ./" > /etc/apt/sources.list.d/temp.list \
+# work around the following APT issue by using "Acquire::GzipIndexes=false" (overriding "/etc/apt/apt.conf.d/docker-gzip-indexes")
+#   Could not open file /var/lib/apt/lists/partial/_tmp_tmp.ODWljpQfkE_._Packages - open (13: Permission denied)
+#   ...
+#   E: Failed to fetch store:/var/lib/apt/lists/partial/_tmp_tmp.ODWljpQfkE_._Packages  Could not open file /var/lib/apt/lists/partial/_tmp_tmp.ODWljpQfkE_._Packages - open (13: Permission denied)
+            && apt-get -o Acquire::GzipIndexes=false update \
+            ;; \
+    esac \
+    \
+    && apt-get install --no-install-recommends --no-install-suggests -y \
+                        $nginxPackages \
+                        gettext-base \
+                        curl \
+    && apt-get remove --purge --auto-remove -y && rm -rf /var/lib/apt/lists/* /etc/apt/sources.list.d/nginx.list \
+    \
+# if we have leftovers from building, let's purge them (including extra, unnecessary build deps)
+    && if [ -n "$tempDir" ]; then \
+        apt-get purge -y --auto-remove \
+        && rm -rf "$tempDir" /etc/apt/sources.list.d/temp.list; \
+    fi \
+# forward request and error logs to docker log collector
+    && ln -sf /dev/stdout /var/log/nginx/access.log \
+    && ln -sf /dev/stderr /var/log/nginx/error.log \
+# create a docker-entrypoint.d directory
+    && mkdir /docker-entrypoint.d
+
+    ✗ LOW CVE-2025-15224
+      https://scout.docker.com/v/CVE-2025-15224
+      Affected range : >0
+      Fixed version  : not fixed
+
+    ✗ LOW CVE-2025-15079
+      https://scout.docker.com/v/CVE-2025-15079
+      Affected range : >0
+      Fixed version  : not fixed
+
+    ✗ LOW CVE-2025-14017
+      https://scout.docker.com/v/CVE-2025-14017
+      Affected range : >0
+      Fixed version  : not fixed
+
+    ✗ LOW CVE-2025-10966
+      https://scout.docker.com/v/CVE-2025-10966
+      Affected range : >0
+      Fixed version  : not fixed
+
+
+   0C     0H     0M     3L  krb5 1.21.3-5+deb13u1
+pkg:deb/debian/krb5@1.21.3-5%2Bdeb13u1?os_distro=trixie&os_name=debian&os_version=13
+
+mainline/debian/Dockerfile (17:136)
+RUN set -x \
+# create nginx user/group first, to be consistent throughout docker variants
+    && groupadd --system --gid 101 nginx \
+    && useradd --system --gid nginx --no-create-home --home /nonexistent --comment "nginx user" --shell /bin/false --uid 101 nginx \
+    && apt-get update \
+    && apt-get install --no-install-recommends --no-install-suggests -y gnupg1 ca-certificates \
+    && \
+    NGINX_GPGKEYS="573BFD6B3D8FBC641079A6ABABF5BD827BD9BF62 8540A6F18833A80E9C1653A42FD21310B49F6B46 9E9BE90EACBCDE69FE9B204CBCDCD8A38D88A2B3"; \
+    NGINX_GPGKEY_PATH=/etc/apt/keyrings/nginx-archive-keyring.gpg; \
+    export GNUPGHOME="$(mktemp -d)"; \
+    found=''; \
+    for NGINX_GPGKEY in $NGINX_GPGKEYS; do \
+    for server in \
+        hkp://keyserver.ubuntu.com:80 \
+        pgp.mit.edu \
+    ; do \
+        echo "Fetching GPG key $NGINX_GPGKEY from $server"; \
+        gpg1 --batch --keyserver "$server" --keyserver-options timeout=10 --recv-keys "$NGINX_GPGKEY" && found=yes && break; \
+    done; \
+    test -z "$found" && echo >&2 "error: failed to fetch GPG key $NGINX_GPGKEY" && exit 1; \
+    done; \
+    gpg1 --batch --export $NGINX_GPGKEYS > "$NGINX_GPGKEY_PATH" ; \
+    rm -rf "$GNUPGHOME"; \
+    apt-get remove --purge --auto-remove -y gnupg1 && rm -rf /var/lib/apt/lists/* \
+    && dpkgArch="$(dpkg --print-architecture)" \
+    && nginxPackages=" \
+        nginx=${NGINX_VERSION}-${PKG_RELEASE} \
+        nginx-module-xslt=${NGINX_VERSION}-${DYNPKG_RELEASE} \
+        nginx-module-geoip=${NGINX_VERSION}-${DYNPKG_RELEASE} \
+        nginx-module-image-filter=${NGINX_VERSION}-${DYNPKG_RELEASE} \
+        nginx-module-njs=${NGINX_VERSION}+${NJS_VERSION}-${NJS_RELEASE} \
+        nginx-module-acme=${NGINX_VERSION}+${ACME_VERSION}-${PKG_RELEASE} \
+    " \
+    && case "$dpkgArch" in \
+        amd64|arm64) \
+# arches officialy built by upstream
+            echo "deb [signed-by=$NGINX_GPGKEY_PATH] https://nginx.org/packages/mainline/debian/ trixie nginx" >> /etc/apt/sources.list.d/nginx.list \
+            && apt-get update \
+            ;; \
+        *) \
+# we're on an architecture upstream doesn't officially build for
+# let's build binaries from the published packaging sources
+# new directory for storing sources and .deb files
+            tempDir="$(mktemp -d)" \
+            && chmod 777 "$tempDir" \
+# (777 to ensure APT's "_apt" user can access it too)
+            \
+# save list of currently-installed packages so build dependencies can be cleanly removed later
+            && savedAptMark="$(apt-mark showmanual)" \
+            \
+# build .deb files from upstream's packaging sources
+            && apt-get update \
+            && apt-get install --no-install-recommends --no-install-suggests -y \
+                cargo \
+                curl \
+                devscripts \
+                equivs \
+                git \
+                libxml2-utils \
+                lsb-release \
+                xsltproc \
+            && ( \
+                cd "$tempDir" \
+                && export CARGO_HOME="$tempDir/.cargo" \
+                && REVISION="b151aac903a6fc121d57f0909415381d0a1c1bbd" \
+                && REVISION=${REVISION%~*} \
+                && curl -f -L -O https://github.com/nginx/pkg-oss/archive/${REVISION}.tar.gz \
+                && PKGOSSCHECKSUM="72c13cfedc25a6c1e01c24dd1f736b0fefd1ef7f73ef569e2726fc99c0137327d2e71c8694bd8b0157be2a7247ec1769904746a852e7698caf7df8a5b0040440 *${REVISION}.tar.gz" \
+                && if [ "$(openssl sha512 -r ${REVISION}.tar.gz)" = "$PKGOSSCHECKSUM" ]; then \
+                    echo "pkg-oss tarball checksum verification succeeded!"; \
+                else \
+                    echo "pkg-oss tarball checksum verification failed!"; \
+                    exit 1; \
+                fi \
+                && tar xzvf ${REVISION}.tar.gz \
+                && cd pkg-oss-${REVISION} \
+                && cd debian \
+                && for target in base module-geoip module-image-filter module-njs module-xslt module-acme; do \
+                    make rules-$target; \
+                    mk-build-deps --install --tool="apt-get -o Debug::pkgProblemResolver=yes --no-install-recommends --yes" \
+                        debuild-$target/nginx-$NGINX_VERSION/debian/control; \
+                done \
+                && make base module-geoip module-image-filter module-njs module-xslt module-acme \
+            ) \
+# we don't remove APT lists here because they get re-downloaded and removed later
+            \
+# reset apt-mark's "manual" list so that "purge --auto-remove" will remove all build dependencies
+# (which is done after we install the built packages so we don't have to redownload any overlapping dependencies)
+            && apt-mark showmanual | xargs apt-mark auto > /dev/null \
+            && { [ -z "$savedAptMark" ] || apt-mark manual $savedAptMark; } \
+            \
+# create a temporary local APT repo to install from (so that dependency resolution can be handled by APT, as it should be)
+            && ls -lAFh "$tempDir" \
+            && ( cd "$tempDir" && dpkg-scanpackages . > Packages ) \
+            && grep '^Package: ' "$tempDir/Packages" \
+            && echo "deb [ trusted=yes ] file://$tempDir ./" > /etc/apt/sources.list.d/temp.list \
+# work around the following APT issue by using "Acquire::GzipIndexes=false" (overriding "/etc/apt/apt.conf.d/docker-gzip-indexes")
+#   Could not open file /var/lib/apt/lists/partial/_tmp_tmp.ODWljpQfkE_._Packages - open (13: Permission denied)
+#   ...
+#   E: Failed to fetch store:/var/lib/apt/lists/partial/_tmp_tmp.ODWljpQfkE_._Packages  Could not open file /var/lib/apt/lists/partial/_tmp_tmp.ODWljpQfkE_._Packages - open (13: Permission denied)
+            && apt-get -o Acquire::GzipIndexes=false update \
+            ;; \
+    esac \
+    \
+    && apt-get install --no-install-recommends --no-install-suggests -y \
+                        $nginxPackages \
+                        gettext-base \
+                        curl \
+    && apt-get remove --purge --auto-remove -y && rm -rf /var/lib/apt/lists/* /etc/apt/sources.list.d/nginx.list \
+    \
+# if we have leftovers from building, let's purge them (including extra, unnecessary build deps)
+    && if [ -n "$tempDir" ]; then \
+        apt-get purge -y --auto-remove \
+        && rm -rf "$tempDir" /etc/apt/sources.list.d/temp.list; \
+    fi \
+# forward request and error logs to docker log collector
+    && ln -sf /dev/stdout /var/log/nginx/access.log \
+    && ln -sf /dev/stderr /var/log/nginx/error.log \
+# create a docker-entrypoint.d directory
+    && mkdir /docker-entrypoint.d
+
+    ✗ LOW CVE-2024-26461
+      https://scout.docker.com/v/CVE-2024-26461
+      Affected range : >0
+      Fixed version  : not fixed
+
+    ✗ LOW CVE-2024-26458
+      https://scout.docker.com/v/CVE-2024-26458
+      Affected range : >0
+      Fixed version  : not fixed
+
+    ✗ LOW CVE-2018-5709
+      https://scout.docker.com/v/CVE-2018-5709
+      Affected range : >0
+      Fixed version  : not fixed
+
+
+   0C     0H     0M     3L  libxml2 2.12.7+dfsg+really2.9.14-2.1+deb13u2
+pkg:deb/debian/libxml2@2.12.7%2Bdfsg%2Breally2.9.14-2.1%2Bdeb13u2?os_distro=trixie&os_name=debian&os_version=13
+
+mainline/debian/Dockerfile (17:136)
+RUN set -x \
+# create nginx user/group first, to be consistent throughout docker variants
+    && groupadd --system --gid 101 nginx \
+    && useradd --system --gid nginx --no-create-home --home /nonexistent --comment "nginx user" --shell /bin/false --uid 101 nginx \
+    && apt-get update \
+    && apt-get install --no-install-recommends --no-install-suggests -y gnupg1 ca-certificates \
+    && \
+    NGINX_GPGKEYS="573BFD6B3D8FBC641079A6ABABF5BD827BD9BF62 8540A6F18833A80E9C1653A42FD21310B49F6B46 9E9BE90EACBCDE69FE9B204CBCDCD8A38D88A2B3"; \
+    NGINX_GPGKEY_PATH=/etc/apt/keyrings/nginx-archive-keyring.gpg; \
+    export GNUPGHOME="$(mktemp -d)"; \
+    found=''; \
+    for NGINX_GPGKEY in $NGINX_GPGKEYS; do \
+    for server in \
+        hkp://keyserver.ubuntu.com:80 \
+        pgp.mit.edu \
+    ; do \
+        echo "Fetching GPG key $NGINX_GPGKEY from $server"; \
+        gpg1 --batch --keyserver "$server" --keyserver-options timeout=10 --recv-keys "$NGINX_GPGKEY" && found=yes && break; \
+    done; \
+    test -z "$found" && echo >&2 "error: failed to fetch GPG key $NGINX_GPGKEY" && exit 1; \
+    done; \
+    gpg1 --batch --export $NGINX_GPGKEYS > "$NGINX_GPGKEY_PATH" ; \
+    rm -rf "$GNUPGHOME"; \
+    apt-get remove --purge --auto-remove -y gnupg1 && rm -rf /var/lib/apt/lists/* \
+    && dpkgArch="$(dpkg --print-architecture)" \
+    && nginxPackages=" \
+        nginx=${NGINX_VERSION}-${PKG_RELEASE} \
+        nginx-module-xslt=${NGINX_VERSION}-${DYNPKG_RELEASE} \
+        nginx-module-geoip=${NGINX_VERSION}-${DYNPKG_RELEASE} \
+        nginx-module-image-filter=${NGINX_VERSION}-${DYNPKG_RELEASE} \
+        nginx-module-njs=${NGINX_VERSION}+${NJS_VERSION}-${NJS_RELEASE} \
+        nginx-module-acme=${NGINX_VERSION}+${ACME_VERSION}-${PKG_RELEASE} \
+    " \
+    && case "$dpkgArch" in \
+        amd64|arm64) \
+# arches officialy built by upstream
+            echo "deb [signed-by=$NGINX_GPGKEY_PATH] https://nginx.org/packages/mainline/debian/ trixie nginx" >> /etc/apt/sources.list.d/nginx.list \
+            && apt-get update \
+            ;; \
+        *) \
+# we're on an architecture upstream doesn't officially build for
+# let's build binaries from the published packaging sources
+# new directory for storing sources and .deb files
+            tempDir="$(mktemp -d)" \
+            && chmod 777 "$tempDir" \
+# (777 to ensure APT's "_apt" user can access it too)
+            \
+# save list of currently-installed packages so build dependencies can be cleanly removed later
+            && savedAptMark="$(apt-mark showmanual)" \
+            \
+# build .deb files from upstream's packaging sources
+            && apt-get update \
+            && apt-get install --no-install-recommends --no-install-suggests -y \
+                cargo \
+                curl \
+                devscripts \
+                equivs \
+                git \
+                libxml2-utils \
+                lsb-release \
+                xsltproc \
+            && ( \
+                cd "$tempDir" \
+                && export CARGO_HOME="$tempDir/.cargo" \
+                && REVISION="b151aac903a6fc121d57f0909415381d0a1c1bbd" \
+                && REVISION=${REVISION%~*} \
+                && curl -f -L -O https://github.com/nginx/pkg-oss/archive/${REVISION}.tar.gz \
+                && PKGOSSCHECKSUM="72c13cfedc25a6c1e01c24dd1f736b0fefd1ef7f73ef569e2726fc99c0137327d2e71c8694bd8b0157be2a7247ec1769904746a852e7698caf7df8a5b0040440 *${REVISION}.tar.gz" \
+                && if [ "$(openssl sha512 -r ${REVISION}.tar.gz)" = "$PKGOSSCHECKSUM" ]; then \
+                    echo "pkg-oss tarball checksum verification succeeded!"; \
+                else \
+                    echo "pkg-oss tarball checksum verification failed!"; \
+                    exit 1; \
+                fi \
+                && tar xzvf ${REVISION}.tar.gz \
+                && cd pkg-oss-${REVISION} \
+                && cd debian \
+                && for target in base module-geoip module-image-filter module-njs module-xslt module-acme; do \
+                    make rules-$target; \
+                    mk-build-deps --install --tool="apt-get -o Debug::pkgProblemResolver=yes --no-install-recommends --yes" \
+                        debuild-$target/nginx-$NGINX_VERSION/debian/control; \
+                done \
+                && make base module-geoip module-image-filter module-njs module-xslt module-acme \
+            ) \
+# we don't remove APT lists here because they get re-downloaded and removed later
+            \
+# reset apt-mark's "manual" list so that "purge --auto-remove" will remove all build dependencies
+# (which is done after we install the built packages so we don't have to redownload any overlapping dependencies)
+            && apt-mark showmanual | xargs apt-mark auto > /dev/null \
+            && { [ -z "$savedAptMark" ] || apt-mark manual $savedAptMark; } \
+            \
+# create a temporary local APT repo to install from (so that dependency resolution can be handled by APT, as it should be)
+            && ls -lAFh "$tempDir" \
+            && ( cd "$tempDir" && dpkg-scanpackages . > Packages ) \
+            && grep '^Package: ' "$tempDir/Packages" \
+            && echo "deb [ trusted=yes ] file://$tempDir ./" > /etc/apt/sources.list.d/temp.list \
+# work around the following APT issue by using "Acquire::GzipIndexes=false" (overriding "/etc/apt/apt.conf.d/docker-gzip-indexes")
+#   Could not open file /var/lib/apt/lists/partial/_tmp_tmp.ODWljpQfkE_._Packages - open (13: Permission denied)
+#   ...
+#   E: Failed to fetch store:/var/lib/apt/lists/partial/_tmp_tmp.ODWljpQfkE_._Packages  Could not open file /var/lib/apt/lists/partial/_tmp_tmp.ODWljpQfkE_._Packages - open (13: Permission denied)
+            && apt-get -o Acquire::GzipIndexes=false update \
+            ;; \
+    esac \
+    \
+    && apt-get install --no-install-recommends --no-install-suggests -y \
+                        $nginxPackages \
+                        gettext-base \
+                        curl \
+    && apt-get remove --purge --auto-remove -y && rm -rf /var/lib/apt/lists/* /etc/apt/sources.list.d/nginx.list \
+    \
+# if we have leftovers from building, let's purge them (including extra, unnecessary build deps)
+    && if [ -n "$tempDir" ]; then \
+        apt-get purge -y --auto-remove \
+        && rm -rf "$tempDir" /etc/apt/sources.list.d/temp.list; \
+    fi \
+# forward request and error logs to docker log collector
+    && ln -sf /dev/stdout /var/log/nginx/access.log \
+    && ln -sf /dev/stderr /var/log/nginx/error.log \
+# create a docker-entrypoint.d directory
+    && mkdir /docker-entrypoint.d
+
+    ✗ LOW CVE-2026-1757
+      https://scout.docker.com/v/CVE-2026-1757
+      Affected range : >0
+      Fixed version  : not fixed
+
+    ✗ LOW CVE-2025-8732
+      https://scout.docker.com/v/CVE-2025-8732
+      Affected range : >0
+      Fixed version  : not fixed
+
+    ✗ LOW CVE-2025-12863
+      https://scout.docker.com/v/CVE-2025-12863
+      Affected range : >=2.12.7+dfsg+really2.9.14-2.1+deb13u2
+      Fixed version  : not fixed
+
+
+   0C     0H     0M     2L  coreutils 9.7-3
+pkg:deb/debian/coreutils@9.7-3?os_distro=trixie&os_name=debian&os_version=13
+
+mainline/debian/Dockerfile (0:0)
+
+
+    ✗ LOW CVE-2025-5278
+      https://scout.docker.com/v/CVE-2025-5278
+      Affected range : >0
+      Fixed version  : not fixed
+
+    ✗ LOW CVE-2017-18018
+      https://scout.docker.com/v/CVE-2017-18018
+      Affected range : >0
+      Fixed version  : not fixed
+
+
+   0C     0H     0M     2L  sqlite3 3.46.1-7+deb13u1
+pkg:deb/debian/sqlite3@3.46.1-7%2Bdeb13u1?os_distro=trixie&os_name=debian&os_version=13
+
+mainline/debian/Dockerfile (0:0)
+
+
+    ✗ LOW CVE-2025-70873
+      https://scout.docker.com/v/CVE-2025-70873
+      Affected range : >0
+      Fixed version  : not fixed
+
+    ✗ LOW CVE-2021-45346
+      https://scout.docker.com/v/CVE-2021-45346
+      Affected range : >0
+      Fixed version  : not fixed
+
+
+   0C     0H     0M     2L  libgcrypt20 1.11.0-7+deb13u1
+pkg:deb/debian/libgcrypt20@1.11.0-7%2Bdeb13u1?os_distro=trixie&os_name=debian&os_version=13
+
+mainline/debian/Dockerfile (17:136)
+RUN set -x \
+# create nginx user/group first, to be consistent throughout docker variants
+    && groupadd --system --gid 101 nginx \
+    && useradd --system --gid nginx --no-create-home --home /nonexistent --comment "nginx user" --shell /bin/false --uid 101 nginx \
+    && apt-get update \
+    && apt-get install --no-install-recommends --no-install-suggests -y gnupg1 ca-certificates \
+    && \
+    NGINX_GPGKEYS="573BFD6B3D8FBC641079A6ABABF5BD827BD9BF62 8540A6F18833A80E9C1653A42FD21310B49F6B46 9E9BE90EACBCDE69FE9B204CBCDCD8A38D88A2B3"; \
+    NGINX_GPGKEY_PATH=/etc/apt/keyrings/nginx-archive-keyring.gpg; \
+    export GNUPGHOME="$(mktemp -d)"; \
+    found=''; \
+    for NGINX_GPGKEY in $NGINX_GPGKEYS; do \
+    for server in \
+        hkp://keyserver.ubuntu.com:80 \
+        pgp.mit.edu \
+    ; do \
+        echo "Fetching GPG key $NGINX_GPGKEY from $server"; \
+        gpg1 --batch --keyserver "$server" --keyserver-options timeout=10 --recv-keys "$NGINX_GPGKEY" && found=yes && break; \
+    done; \
+    test -z "$found" && echo >&2 "error: failed to fetch GPG key $NGINX_GPGKEY" && exit 1; \
+    done; \
+    gpg1 --batch --export $NGINX_GPGKEYS > "$NGINX_GPGKEY_PATH" ; \
+    rm -rf "$GNUPGHOME"; \
+    apt-get remove --purge --auto-remove -y gnupg1 && rm -rf /var/lib/apt/lists/* \
+    && dpkgArch="$(dpkg --print-architecture)" \
+    && nginxPackages=" \
+        nginx=${NGINX_VERSION}-${PKG_RELEASE} \
+        nginx-module-xslt=${NGINX_VERSION}-${DYNPKG_RELEASE} \
+        nginx-module-geoip=${NGINX_VERSION}-${DYNPKG_RELEASE} \
+        nginx-module-image-filter=${NGINX_VERSION}-${DYNPKG_RELEASE} \
+        nginx-module-njs=${NGINX_VERSION}+${NJS_VERSION}-${NJS_RELEASE} \
+        nginx-module-acme=${NGINX_VERSION}+${ACME_VERSION}-${PKG_RELEASE} \
+    " \
+    && case "$dpkgArch" in \
+        amd64|arm64) \
+# arches officialy built by upstream
+            echo "deb [signed-by=$NGINX_GPGKEY_PATH] https://nginx.org/packages/mainline/debian/ trixie nginx" >> /etc/apt/sources.list.d/nginx.list \
+            && apt-get update \
+            ;; \
+        *) \
+# we're on an architecture upstream doesn't officially build for
+# let's build binaries from the published packaging sources
+# new directory for storing sources and .deb files
+            tempDir="$(mktemp -d)" \
+            && chmod 777 "$tempDir" \
+# (777 to ensure APT's "_apt" user can access it too)
+            \
+# save list of currently-installed packages so build dependencies can be cleanly removed later
+            && savedAptMark="$(apt-mark showmanual)" \
+            \
+# build .deb files from upstream's packaging sources
+            && apt-get update \
+            && apt-get install --no-install-recommends --no-install-suggests -y \
+                cargo \
+                curl \
+                devscripts \
+                equivs \
+                git \
+                libxml2-utils \
+                lsb-release \
+                xsltproc \
+            && ( \
+                cd "$tempDir" \
+                && export CARGO_HOME="$tempDir/.cargo" \
+                && REVISION="b151aac903a6fc121d57f0909415381d0a1c1bbd" \
+                && REVISION=${REVISION%~*} \
+                && curl -f -L -O https://github.com/nginx/pkg-oss/archive/${REVISION}.tar.gz \
+                && PKGOSSCHECKSUM="72c13cfedc25a6c1e01c24dd1f736b0fefd1ef7f73ef569e2726fc99c0137327d2e71c8694bd8b0157be2a7247ec1769904746a852e7698caf7df8a5b0040440 *${REVISION}.tar.gz" \
+                && if [ "$(openssl sha512 -r ${REVISION}.tar.gz)" = "$PKGOSSCHECKSUM" ]; then \
+                    echo "pkg-oss tarball checksum verification succeeded!"; \
+                else \
+                    echo "pkg-oss tarball checksum verification failed!"; \
+                    exit 1; \
+                fi \
+                && tar xzvf ${REVISION}.tar.gz \
+                && cd pkg-oss-${REVISION} \
+                && cd debian \
+                && for target in base module-geoip module-image-filter module-njs module-xslt module-acme; do \
+                    make rules-$target; \
+                    mk-build-deps --install --tool="apt-get -o Debug::pkgProblemResolver=yes --no-install-recommends --yes" \
+                        debuild-$target/nginx-$NGINX_VERSION/debian/control; \
+                done \
+                && make base module-geoip module-image-filter module-njs module-xslt module-acme \
+            ) \
+# we don't remove APT lists here because they get re-downloaded and removed later
+            \
+# reset apt-mark's "manual" list so that "purge --auto-remove" will remove all build dependencies
+# (which is done after we install the built packages so we don't have to redownload any overlapping dependencies)
+            && apt-mark showmanual | xargs apt-mark auto > /dev/null \
+            && { [ -z "$savedAptMark" ] || apt-mark manual $savedAptMark; } \
+            \
+# create a temporary local APT repo to install from (so that dependency resolution can be handled by APT, as it should be)
+            && ls -lAFh "$tempDir" \
+            && ( cd "$tempDir" && dpkg-scanpackages . > Packages ) \
+            && grep '^Package: ' "$tempDir/Packages" \
+            && echo "deb [ trusted=yes ] file://$tempDir ./" > /etc/apt/sources.list.d/temp.list \
+# work around the following APT issue by using "Acquire::GzipIndexes=false" (overriding "/etc/apt/apt.conf.d/docker-gzip-indexes")
+#   Could not open file /var/lib/apt/lists/partial/_tmp_tmp.ODWljpQfkE_._Packages - open (13: Permission denied)
+#   ...
+#   E: Failed to fetch store:/var/lib/apt/lists/partial/_tmp_tmp.ODWljpQfkE_._Packages  Could not open file /var/lib/apt/lists/partial/_tmp_tmp.ODWljpQfkE_._Packages - open (13: Permission denied)
+            && apt-get -o Acquire::GzipIndexes=false update \
+            ;; \
+    esac \
+    \
+    && apt-get install --no-install-recommends --no-install-suggests -y \
+                        $nginxPackages \
+                        gettext-base \
+                        curl \
+    && apt-get remove --purge --auto-remove -y && rm -rf /var/lib/apt/lists/* /etc/apt/sources.list.d/nginx.list \
+    \
+# if we have leftovers from building, let's purge them (including extra, unnecessary build deps)
+    && if [ -n "$tempDir" ]; then \
+        apt-get purge -y --auto-remove \
+        && rm -rf "$tempDir" /etc/apt/sources.list.d/temp.list; \
+    fi \
+# forward request and error logs to docker log collector
+    && ln -sf /dev/stdout /var/log/nginx/access.log \
+    && ln -sf /dev/stderr /var/log/nginx/error.log \
+# create a docker-entrypoint.d directory
+    && mkdir /docker-entrypoint.d
+
+    ✗ LOW CVE-2024-2236
+      https://scout.docker.com/v/CVE-2024-2236
+      Affected range : >0
+      Fixed version  : not fixed
+
+    ✗ LOW CVE-2018-6829
+      https://scout.docker.com/v/CVE-2018-6829
+      Affected range : >0
+      Fixed version  : not fixed
+
+
+   0C     0H     0M     2L  util-linux 2.41-5
+pkg:deb/debian/util-linux@2.41-5?os_distro=trixie&os_name=debian&os_version=13
+
+mainline/debian/Dockerfile (0:0)
+
+
+    ✗ LOW CVE-2025-14104
+      https://scout.docker.com/v/CVE-2025-14104
+      Affected range : >0
+      Fixed version  : not fixed
+
+    ✗ LOW CVE-2022-0563
+      https://scout.docker.com/v/CVE-2022-0563
+      Affected range : >0
+      Fixed version  : not fixed
+
+
+   0C     0H     0M     2L  libpng1.6 1.6.48-1+deb13u5
+pkg:deb/debian/libpng1.6@1.6.48-1%2Bdeb13u5?os_distro=trixie&os_name=debian&os_version=13
+
+mainline/debian/Dockerfile (17:136)
+RUN set -x \
+# create nginx user/group first, to be consistent throughout docker variants
+    && groupadd --system --gid 101 nginx \
+    && useradd --system --gid nginx --no-create-home --home /nonexistent --comment "nginx user" --shell /bin/false --uid 101 nginx \
+    && apt-get update \
+    && apt-get install --no-install-recommends --no-install-suggests -y gnupg1 ca-certificates \
+    && \
+    NGINX_GPGKEYS="573BFD6B3D8FBC641079A6ABABF5BD827BD9BF62 8540A6F18833A80E9C1653A42FD21310B49F6B46 9E9BE90EACBCDE69FE9B204CBCDCD8A38D88A2B3"; \
+    NGINX_GPGKEY_PATH=/etc/apt/keyrings/nginx-archive-keyring.gpg; \
+    export GNUPGHOME="$(mktemp -d)"; \
+    found=''; \
+    for NGINX_GPGKEY in $NGINX_GPGKEYS; do \
+    for server in \
+        hkp://keyserver.ubuntu.com:80 \
+        pgp.mit.edu \
+    ; do \
+        echo "Fetching GPG key $NGINX_GPGKEY from $server"; \
+        gpg1 --batch --keyserver "$server" --keyserver-options timeout=10 --recv-keys "$NGINX_GPGKEY" && found=yes && break; \
+    done; \
+    test -z "$found" && echo >&2 "error: failed to fetch GPG key $NGINX_GPGKEY" && exit 1; \
+    done; \
+    gpg1 --batch --export $NGINX_GPGKEYS > "$NGINX_GPGKEY_PATH" ; \
+    rm -rf "$GNUPGHOME"; \
+    apt-get remove --purge --auto-remove -y gnupg1 && rm -rf /var/lib/apt/lists/* \
+    && dpkgArch="$(dpkg --print-architecture)" \
+    && nginxPackages=" \
+        nginx=${NGINX_VERSION}-${PKG_RELEASE} \
+        nginx-module-xslt=${NGINX_VERSION}-${DYNPKG_RELEASE} \
+        nginx-module-geoip=${NGINX_VERSION}-${DYNPKG_RELEASE} \
+        nginx-module-image-filter=${NGINX_VERSION}-${DYNPKG_RELEASE} \
+        nginx-module-njs=${NGINX_VERSION}+${NJS_VERSION}-${NJS_RELEASE} \
+        nginx-module-acme=${NGINX_VERSION}+${ACME_VERSION}-${PKG_RELEASE} \
+    " \
+    && case "$dpkgArch" in \
+        amd64|arm64) \
+# arches officialy built by upstream
+            echo "deb [signed-by=$NGINX_GPGKEY_PATH] https://nginx.org/packages/mainline/debian/ trixie nginx" >> /etc/apt/sources.list.d/nginx.list \
+            && apt-get update \
+            ;; \
+        *) \
+# we're on an architecture upstream doesn't officially build for
+# let's build binaries from the published packaging sources
+# new directory for storing sources and .deb files
+            tempDir="$(mktemp -d)" \
+            && chmod 777 "$tempDir" \
+# (777 to ensure APT's "_apt" user can access it too)
+            \
+# save list of currently-installed packages so build dependencies can be cleanly removed later
+            && savedAptMark="$(apt-mark showmanual)" \
+            \
+# build .deb files from upstream's packaging sources
+            && apt-get update \
+            && apt-get install --no-install-recommends --no-install-suggests -y \
+                cargo \
+                curl \
+                devscripts \
+                equivs \
+                git \
+                libxml2-utils \
+                lsb-release \
+                xsltproc \
+            && ( \
+                cd "$tempDir" \
+                && export CARGO_HOME="$tempDir/.cargo" \
+                && REVISION="b151aac903a6fc121d57f0909415381d0a1c1bbd" \
+                && REVISION=${REVISION%~*} \
+                && curl -f -L -O https://github.com/nginx/pkg-oss/archive/${REVISION}.tar.gz \
+                && PKGOSSCHECKSUM="72c13cfedc25a6c1e01c24dd1f736b0fefd1ef7f73ef569e2726fc99c0137327d2e71c8694bd8b0157be2a7247ec1769904746a852e7698caf7df8a5b0040440 *${REVISION}.tar.gz" \
+                && if [ "$(openssl sha512 -r ${REVISION}.tar.gz)" = "$PKGOSSCHECKSUM" ]; then \
+                    echo "pkg-oss tarball checksum verification succeeded!"; \
+                else \
+                    echo "pkg-oss tarball checksum verification failed!"; \
+                    exit 1; \
+                fi \
+                && tar xzvf ${REVISION}.tar.gz \
+                && cd pkg-oss-${REVISION} \
+                && cd debian \
+                && for target in base module-geoip module-image-filter module-njs module-xslt module-acme; do \
+                    make rules-$target; \
+                    mk-build-deps --install --tool="apt-get -o Debug::pkgProblemResolver=yes --no-install-recommends --yes" \
+                        debuild-$target/nginx-$NGINX_VERSION/debian/control; \
+                done \
+                && make base module-geoip module-image-filter module-njs module-xslt module-acme \
+            ) \
+# we don't remove APT lists here because they get re-downloaded and removed later
+            \
+# reset apt-mark's "manual" list so that "purge --auto-remove" will remove all build dependencies
+# (which is done after we install the built packages so we don't have to redownload any overlapping dependencies)
+            && apt-mark showmanual | xargs apt-mark auto > /dev/null \
+            && { [ -z "$savedAptMark" ] || apt-mark manual $savedAptMark; } \
+            \
+# create a temporary local APT repo to install from (so that dependency resolution can be handled by APT, as it should be)
+            && ls -lAFh "$tempDir" \
+            && ( cd "$tempDir" && dpkg-scanpackages . > Packages ) \
+            && grep '^Package: ' "$tempDir/Packages" \
+            && echo "deb [ trusted=yes ] file://$tempDir ./" > /etc/apt/sources.list.d/temp.list \
+# work around the following APT issue by using "Acquire::GzipIndexes=false" (overriding "/etc/apt/apt.conf.d/docker-gzip-indexes")
+#   Could not open file /var/lib/apt/lists/partial/_tmp_tmp.ODWljpQfkE_._Packages - open (13: Permission denied)
+#   ...
+#   E: Failed to fetch store:/var/lib/apt/lists/partial/_tmp_tmp.ODWljpQfkE_._Packages  Could not open file /var/lib/apt/lists/partial/_tmp_tmp.ODWljpQfkE_._Packages - open (13: Permission denied)
+            && apt-get -o Acquire::GzipIndexes=false update \
+            ;; \
+    esac \
+    \
+    && apt-get install --no-install-recommends --no-install-suggests -y \
+                        $nginxPackages \
+                        gettext-base \
+                        curl \
+    && apt-get remove --purge --auto-remove -y && rm -rf /var/lib/apt/lists/* /etc/apt/sources.list.d/nginx.list \
+    \
+# if we have leftovers from building, let's purge them (including extra, unnecessary build deps)
+    && if [ -n "$tempDir" ]; then \
+        apt-get purge -y --auto-remove \
+        && rm -rf "$tempDir" /etc/apt/sources.list.d/temp.list; \
+    fi \
+# forward request and error logs to docker log collector
+    && ln -sf /dev/stdout /var/log/nginx/access.log \
+    && ln -sf /dev/stderr /var/log/nginx/error.log \
+# create a docker-entrypoint.d directory
+    && mkdir /docker-entrypoint.d
+
+    ✗ LOW CVE-2026-3713
+      https://scout.docker.com/v/CVE-2026-3713
+      Affected range : >0
+      Fixed version  : not fixed
+
+    ✗ LOW CVE-2021-4214
+      https://scout.docker.com/v/CVE-2021-4214
+      Affected range : >0
+      Fixed version  : not fixed
+
+
+   0C     0H     0M     1L  openssl 3.5.6-1~deb13u2
+pkg:deb/debian/openssl@3.5.6-1~deb13u2?os_distro=trixie&os_name=debian&os_version=13
+
+mainline/debian/Dockerfile (0:0)
+
+
+    ✗ LOW CVE-2010-0928
+      https://scout.docker.com/v/CVE-2010-0928
+      Affected range : >=3.2.1-3
+      Fixed version  : not fixed
+
+
+   0C     0H     0M     1L  apt 3.0.3
+pkg:deb/debian/apt@3.0.3?os_distro=trixie&os_name=debian&os_version=13
+
+mainline/debian/Dockerfile (0:0)
+
+
+    ✗ LOW CVE-2011-3374
+      https://scout.docker.com/v/CVE-2011-3374
+      Affected range : >0
+      Fixed version  : not fixed
+
+
+   0C     0H     0M     1L  gnutls28 3.8.9-3+deb13u4
+pkg:deb/debian/gnutls28@3.8.9-3%2Bdeb13u4?os_distro=trixie&os_name=debian&os_version=13
+
+mainline/debian/Dockerfile (17:136)
+RUN set -x \
+# create nginx user/group first, to be consistent throughout docker variants
+    && groupadd --system --gid 101 nginx \
+    && useradd --system --gid nginx --no-create-home --home /nonexistent --comment "nginx user" --shell /bin/false --uid 101 nginx \
+    && apt-get update \
+    && apt-get install --no-install-recommends --no-install-suggests -y gnupg1 ca-certificates \
+    && \
+    NGINX_GPGKEYS="573BFD6B3D8FBC641079A6ABABF5BD827BD9BF62 8540A6F18833A80E9C1653A42FD21310B49F6B46 9E9BE90EACBCDE69FE9B204CBCDCD8A38D88A2B3"; \
+    NGINX_GPGKEY_PATH=/etc/apt/keyrings/nginx-archive-keyring.gpg; \
+    export GNUPGHOME="$(mktemp -d)"; \
+    found=''; \
+    for NGINX_GPGKEY in $NGINX_GPGKEYS; do \
+    for server in \
+        hkp://keyserver.ubuntu.com:80 \
+        pgp.mit.edu \
+    ; do \
+        echo "Fetching GPG key $NGINX_GPGKEY from $server"; \
+        gpg1 --batch --keyserver "$server" --keyserver-options timeout=10 --recv-keys "$NGINX_GPGKEY" && found=yes && break; \
+    done; \
+    test -z "$found" && echo >&2 "error: failed to fetch GPG key $NGINX_GPGKEY" && exit 1; \
+    done; \
+    gpg1 --batch --export $NGINX_GPGKEYS > "$NGINX_GPGKEY_PATH" ; \
+    rm -rf "$GNUPGHOME"; \
+    apt-get remove --purge --auto-remove -y gnupg1 && rm -rf /var/lib/apt/lists/* \
+    && dpkgArch="$(dpkg --print-architecture)" \
+    && nginxPackages=" \
+        nginx=${NGINX_VERSION}-${PKG_RELEASE} \
+        nginx-module-xslt=${NGINX_VERSION}-${DYNPKG_RELEASE} \
+        nginx-module-geoip=${NGINX_VERSION}-${DYNPKG_RELEASE} \
+        nginx-module-image-filter=${NGINX_VERSION}-${DYNPKG_RELEASE} \
+        nginx-module-njs=${NGINX_VERSION}+${NJS_VERSION}-${NJS_RELEASE} \
+        nginx-module-acme=${NGINX_VERSION}+${ACME_VERSION}-${PKG_RELEASE} \
+    " \
+    && case "$dpkgArch" in \
+        amd64|arm64) \
+# arches officialy built by upstream
+            echo "deb [signed-by=$NGINX_GPGKEY_PATH] https://nginx.org/packages/mainline/debian/ trixie nginx" >> /etc/apt/sources.list.d/nginx.list \
+            && apt-get update \
+            ;; \
+        *) \
+# we're on an architecture upstream doesn't officially build for
+# let's build binaries from the published packaging sources
+# new directory for storing sources and .deb files
+            tempDir="$(mktemp -d)" \
+            && chmod 777 "$tempDir" \
+# (777 to ensure APT's "_apt" user can access it too)
+            \
+# save list of currently-installed packages so build dependencies can be cleanly removed later
+            && savedAptMark="$(apt-mark showmanual)" \
+            \
+# build .deb files from upstream's packaging sources
+            && apt-get update \
+            && apt-get install --no-install-recommends --no-install-suggests -y \
+                cargo \
+                curl \
+                devscripts \
+                equivs \
+                git \
+                libxml2-utils \
+                lsb-release \
+                xsltproc \
+            && ( \
+                cd "$tempDir" \
+                && export CARGO_HOME="$tempDir/.cargo" \
+                && REVISION="b151aac903a6fc121d57f0909415381d0a1c1bbd" \
+                && REVISION=${REVISION%~*} \
+                && curl -f -L -O https://github.com/nginx/pkg-oss/archive/${REVISION}.tar.gz \
+                && PKGOSSCHECKSUM="72c13cfedc25a6c1e01c24dd1f736b0fefd1ef7f73ef569e2726fc99c0137327d2e71c8694bd8b0157be2a7247ec1769904746a852e7698caf7df8a5b0040440 *${REVISION}.tar.gz" \
+                && if [ "$(openssl sha512 -r ${REVISION}.tar.gz)" = "$PKGOSSCHECKSUM" ]; then \
+                    echo "pkg-oss tarball checksum verification succeeded!"; \
+                else \
+                    echo "pkg-oss tarball checksum verification failed!"; \
+                    exit 1; \
+                fi \
+                && tar xzvf ${REVISION}.tar.gz \
+                && cd pkg-oss-${REVISION} \
+                && cd debian \
+                && for target in base module-geoip module-image-filter module-njs module-xslt module-acme; do \
+                    make rules-$target; \
+                    mk-build-deps --install --tool="apt-get -o Debug::pkgProblemResolver=yes --no-install-recommends --yes" \
+                        debuild-$target/nginx-$NGINX_VERSION/debian/control; \
+                done \
+                && make base module-geoip module-image-filter module-njs module-xslt module-acme \
+            ) \
+# we don't remove APT lists here because they get re-downloaded and removed later
+            \
+# reset apt-mark's "manual" list so that "purge --auto-remove" will remove all build dependencies
+# (which is done after we install the built packages so we don't have to redownload any overlapping dependencies)
+            && apt-mark showmanual | xargs apt-mark auto > /dev/null \
+            && { [ -z "$savedAptMark" ] || apt-mark manual $savedAptMark; } \
+            \
+# create a temporary local APT repo to install from (so that dependency resolution can be handled by APT, as it should be)
+            && ls -lAFh "$tempDir" \
+            && ( cd "$tempDir" && dpkg-scanpackages . > Packages ) \
+            && grep '^Package: ' "$tempDir/Packages" \
+            && echo "deb [ trusted=yes ] file://$tempDir ./" > /etc/apt/sources.list.d/temp.list \
+# work around the following APT issue by using "Acquire::GzipIndexes=false" (overriding "/etc/apt/apt.conf.d/docker-gzip-indexes")
+#   Could not open file /var/lib/apt/lists/partial/_tmp_tmp.ODWljpQfkE_._Packages - open (13: Permission denied)
+#   ...
+#   E: Failed to fetch store:/var/lib/apt/lists/partial/_tmp_tmp.ODWljpQfkE_._Packages  Could not open file /var/lib/apt/lists/partial/_tmp_tmp.ODWljpQfkE_._Packages - open (13: Permission denied)
+            && apt-get -o Acquire::GzipIndexes=false update \
+            ;; \
+    esac \
+    \
+    && apt-get install --no-install-recommends --no-install-suggests -y \
+                        $nginxPackages \
+                        gettext-base \
+                        curl \
+    && apt-get remove --purge --auto-remove -y && rm -rf /var/lib/apt/lists/* /etc/apt/sources.list.d/nginx.list \
+    \
+# if we have leftovers from building, let's purge them (including extra, unnecessary build deps)
+    && if [ -n "$tempDir" ]; then \
+        apt-get purge -y --auto-remove \
+        && rm -rf "$tempDir" /etc/apt/sources.list.d/temp.list; \
+    fi \
+# forward request and error logs to docker log collector
+    && ln -sf /dev/stdout /var/log/nginx/access.log \
+    && ln -sf /dev/stderr /var/log/nginx/error.log \
+# create a docker-entrypoint.d directory
+    && mkdir /docker-entrypoint.d
+
+    ✗ LOW CVE-2011-3389
+      https://scout.docker.com/v/CVE-2011-3389
+      Affected range : >0
+      Fixed version  : not fixed
+
+
+   0C     0H     0M     1L  shadow 1:4.17.4-2
+pkg:deb/debian/shadow@1%3A4.17.4-2?os_distro=trixie&os_name=debian&os_version=13
+
+mainline/debian/Dockerfile (0:0)
+
+
+    ✗ LOW CVE-2007-5686
+      https://scout.docker.com/v/CVE-2007-5686
+      Affected range : >0
+      Fixed version  : not fixed
+
+
+   0C     0H     0M     1L  libxslt 1.1.35-1.2+deb13u3
+pkg:deb/debian/libxslt@1.1.35-1.2%2Bdeb13u3?os_distro=trixie&os_name=debian&os_version=13
+
+mainline/debian/Dockerfile (17:136)
+RUN set -x \
+# create nginx user/group first, to be consistent throughout docker variants
+    && groupadd --system --gid 101 nginx \
+    && useradd --system --gid nginx --no-create-home --home /nonexistent --comment "nginx user" --shell /bin/false --uid 101 nginx \
+    && apt-get update \
+    && apt-get install --no-install-recommends --no-install-suggests -y gnupg1 ca-certificates \
+    && \
+    NGINX_GPGKEYS="573BFD6B3D8FBC641079A6ABABF5BD827BD9BF62 8540A6F18833A80E9C1653A42FD21310B49F6B46 9E9BE90EACBCDE69FE9B204CBCDCD8A38D88A2B3"; \
+    NGINX_GPGKEY_PATH=/etc/apt/keyrings/nginx-archive-keyring.gpg; \
+    export GNUPGHOME="$(mktemp -d)"; \
+    found=''; \
+    for NGINX_GPGKEY in $NGINX_GPGKEYS; do \
+    for server in \
+        hkp://keyserver.ubuntu.com:80 \
+        pgp.mit.edu \
+    ; do \
+        echo "Fetching GPG key $NGINX_GPGKEY from $server"; \
+        gpg1 --batch --keyserver "$server" --keyserver-options timeout=10 --recv-keys "$NGINX_GPGKEY" && found=yes && break; \
+    done; \
+    test -z "$found" && echo >&2 "error: failed to fetch GPG key $NGINX_GPGKEY" && exit 1; \
+    done; \
+    gpg1 --batch --export $NGINX_GPGKEYS > "$NGINX_GPGKEY_PATH" ; \
+    rm -rf "$GNUPGHOME"; \
+    apt-get remove --purge --auto-remove -y gnupg1 && rm -rf /var/lib/apt/lists/* \
+    && dpkgArch="$(dpkg --print-architecture)" \
+    && nginxPackages=" \
+        nginx=${NGINX_VERSION}-${PKG_RELEASE} \
+        nginx-module-xslt=${NGINX_VERSION}-${DYNPKG_RELEASE} \
+        nginx-module-geoip=${NGINX_VERSION}-${DYNPKG_RELEASE} \
+        nginx-module-image-filter=${NGINX_VERSION}-${DYNPKG_RELEASE} \
+        nginx-module-njs=${NGINX_VERSION}+${NJS_VERSION}-${NJS_RELEASE} \
+        nginx-module-acme=${NGINX_VERSION}+${ACME_VERSION}-${PKG_RELEASE} \
+    " \
+    && case "$dpkgArch" in \
+        amd64|arm64) \
+# arches officialy built by upstream
+            echo "deb [signed-by=$NGINX_GPGKEY_PATH] https://nginx.org/packages/mainline/debian/ trixie nginx" >> /etc/apt/sources.list.d/nginx.list \
+            && apt-get update \
+            ;; \
+        *) \
+# we're on an architecture upstream doesn't officially build for
+# let's build binaries from the published packaging sources
+# new directory for storing sources and .deb files
+            tempDir="$(mktemp -d)" \
+            && chmod 777 "$tempDir" \
+# (777 to ensure APT's "_apt" user can access it too)
+            \
+# save list of currently-installed packages so build dependencies can be cleanly removed later
+            && savedAptMark="$(apt-mark showmanual)" \
+            \
+# build .deb files from upstream's packaging sources
+            && apt-get update \
+            && apt-get install --no-install-recommends --no-install-suggests -y \
+                cargo \
+                curl \
+                devscripts \
+                equivs \
+                git \
+                libxml2-utils \
+                lsb-release \
+                xsltproc \
+            && ( \
+                cd "$tempDir" \
+                && export CARGO_HOME="$tempDir/.cargo" \
+                && REVISION="b151aac903a6fc121d57f0909415381d0a1c1bbd" \
+                && REVISION=${REVISION%~*} \
+                && curl -f -L -O https://github.com/nginx/pkg-oss/archive/${REVISION}.tar.gz \
+                && PKGOSSCHECKSUM="72c13cfedc25a6c1e01c24dd1f736b0fefd1ef7f73ef569e2726fc99c0137327d2e71c8694bd8b0157be2a7247ec1769904746a852e7698caf7df8a5b0040440 *${REVISION}.tar.gz" \
+                && if [ "$(openssl sha512 -r ${REVISION}.tar.gz)" = "$PKGOSSCHECKSUM" ]; then \
+                    echo "pkg-oss tarball checksum verification succeeded!"; \
+                else \
+                    echo "pkg-oss tarball checksum verification failed!"; \
+                    exit 1; \
+                fi \
+                && tar xzvf ${REVISION}.tar.gz \
+                && cd pkg-oss-${REVISION} \
+                && cd debian \
+                && for target in base module-geoip module-image-filter module-njs module-xslt module-acme; do \
+                    make rules-$target; \
+                    mk-build-deps --install --tool="apt-get -o Debug::pkgProblemResolver=yes --no-install-recommends --yes" \
+                        debuild-$target/nginx-$NGINX_VERSION/debian/control; \
+                done \
+                && make base module-geoip module-image-filter module-njs module-xslt module-acme \
+            ) \
+# we don't remove APT lists here because they get re-downloaded and removed later
+            \
+# reset apt-mark's "manual" list so that "purge --auto-remove" will remove all build dependencies
+# (which is done after we install the built packages so we don't have to redownload any overlapping dependencies)
+            && apt-mark showmanual | xargs apt-mark auto > /dev/null \
+            && { [ -z "$savedAptMark" ] || apt-mark manual $savedAptMark; } \
+            \
+# create a temporary local APT repo to install from (so that dependency resolution can be handled by APT, as it should be)
+            && ls -lAFh "$tempDir" \
+            && ( cd "$tempDir" && dpkg-scanpackages . > Packages ) \
+            && grep '^Package: ' "$tempDir/Packages" \
+            && echo "deb [ trusted=yes ] file://$tempDir ./" > /etc/apt/sources.list.d/temp.list \
+# work around the following APT issue by using "Acquire::GzipIndexes=false" (overriding "/etc/apt/apt.conf.d/docker-gzip-indexes")
+#   Could not open file /var/lib/apt/lists/partial/_tmp_tmp.ODWljpQfkE_._Packages - open (13: Permission denied)
+#   ...
+#   E: Failed to fetch store:/var/lib/apt/lists/partial/_tmp_tmp.ODWljpQfkE_._Packages  Could not open file /var/lib/apt/lists/partial/_tmp_tmp.ODWljpQfkE_._Packages - open (13: Permission denied)
+            && apt-get -o Acquire::GzipIndexes=false update \
+            ;; \
+    esac \
+    \
+    && apt-get install --no-install-recommends --no-install-suggests -y \
+                        $nginxPackages \
+                        gettext-base \
+                        curl \
+    && apt-get remove --purge --auto-remove -y && rm -rf /var/lib/apt/lists/* /etc/apt/sources.list.d/nginx.list \
+    \
+# if we have leftovers from building, let's purge them (including extra, unnecessary build deps)
+    && if [ -n "$tempDir" ]; then \
+        apt-get purge -y --auto-remove \
+        && rm -rf "$tempDir" /etc/apt/sources.list.d/temp.list; \
+    fi \
+# forward request and error logs to docker log collector
+    && ln -sf /dev/stdout /var/log/nginx/access.log \
+    && ln -sf /dev/stderr /var/log/nginx/error.log \
+# create a docker-entrypoint.d directory
+    && mkdir /docker-entrypoint.d
+
+    ✗ LOW CVE-2015-9019
+      https://scout.docker.com/v/CVE-2015-9019
+      Affected range : >0
+      Fixed version  : not fixed
+
+
+   0C     0H     0M     1L  jbigkit 2.1-6.1
+pkg:deb/debian/jbigkit@2.1-6.1?os_distro=trixie&os_name=debian&os_version=13
+
+mainline/debian/Dockerfile (17:136)
+RUN set -x \
+# create nginx user/group first, to be consistent throughout docker variants
+    && groupadd --system --gid 101 nginx \
+    && useradd --system --gid nginx --no-create-home --home /nonexistent --comment "nginx user" --shell /bin/false --uid 101 nginx \
+    && apt-get update \
+    && apt-get install --no-install-recommends --no-install-suggests -y gnupg1 ca-certificates \
+    && \
+    NGINX_GPGKEYS="573BFD6B3D8FBC641079A6ABABF5BD827BD9BF62 8540A6F18833A80E9C1653A42FD21310B49F6B46 9E9BE90EACBCDE69FE9B204CBCDCD8A38D88A2B3"; \
+    NGINX_GPGKEY_PATH=/etc/apt/keyrings/nginx-archive-keyring.gpg; \
+    export GNUPGHOME="$(mktemp -d)"; \
+    found=''; \
+    for NGINX_GPGKEY in $NGINX_GPGKEYS; do \
+    for server in \
+        hkp://keyserver.ubuntu.com:80 \
+        pgp.mit.edu \
+    ; do \
+        echo "Fetching GPG key $NGINX_GPGKEY from $server"; \
+        gpg1 --batch --keyserver "$server" --keyserver-options timeout=10 --recv-keys "$NGINX_GPGKEY" && found=yes && break; \
+    done; \
+    test -z "$found" && echo >&2 "error: failed to fetch GPG key $NGINX_GPGKEY" && exit 1; \
+    done; \
+    gpg1 --batch --export $NGINX_GPGKEYS > "$NGINX_GPGKEY_PATH" ; \
+    rm -rf "$GNUPGHOME"; \
+    apt-get remove --purge --auto-remove -y gnupg1 && rm -rf /var/lib/apt/lists/* \
+    && dpkgArch="$(dpkg --print-architecture)" \
+    && nginxPackages=" \
+        nginx=${NGINX_VERSION}-${PKG_RELEASE} \
+        nginx-module-xslt=${NGINX_VERSION}-${DYNPKG_RELEASE} \
+        nginx-module-geoip=${NGINX_VERSION}-${DYNPKG_RELEASE} \
+        nginx-module-image-filter=${NGINX_VERSION}-${DYNPKG_RELEASE} \
+        nginx-module-njs=${NGINX_VERSION}+${NJS_VERSION}-${NJS_RELEASE} \
+        nginx-module-acme=${NGINX_VERSION}+${ACME_VERSION}-${PKG_RELEASE} \
+    " \
+    && case "$dpkgArch" in \
+        amd64|arm64) \
+# arches officialy built by upstream
+            echo "deb [signed-by=$NGINX_GPGKEY_PATH] https://nginx.org/packages/mainline/debian/ trixie nginx" >> /etc/apt/sources.list.d/nginx.list \
+            && apt-get update \
+            ;; \
+        *) \
+# we're on an architecture upstream doesn't officially build for
+# let's build binaries from the published packaging sources
+# new directory for storing sources and .deb files
+            tempDir="$(mktemp -d)" \
+            && chmod 777 "$tempDir" \
+# (777 to ensure APT's "_apt" user can access it too)
+            \
+# save list of currently-installed packages so build dependencies can be cleanly removed later
+            && savedAptMark="$(apt-mark showmanual)" \
+            \
+# build .deb files from upstream's packaging sources
+            && apt-get update \
+            && apt-get install --no-install-recommends --no-install-suggests -y \
+                cargo \
+                curl \
+                devscripts \
+                equivs \
+                git \
+                libxml2-utils \
+                lsb-release \
+                xsltproc \
+            && ( \
+                cd "$tempDir" \
+                && export CARGO_HOME="$tempDir/.cargo" \
+                && REVISION="b151aac903a6fc121d57f0909415381d0a1c1bbd" \
+                && REVISION=${REVISION%~*} \
+                && curl -f -L -O https://github.com/nginx/pkg-oss/archive/${REVISION}.tar.gz \
+                && PKGOSSCHECKSUM="72c13cfedc25a6c1e01c24dd1f736b0fefd1ef7f73ef569e2726fc99c0137327d2e71c8694bd8b0157be2a7247ec1769904746a852e7698caf7df8a5b0040440 *${REVISION}.tar.gz" \
+                && if [ "$(openssl sha512 -r ${REVISION}.tar.gz)" = "$PKGOSSCHECKSUM" ]; then \
+                    echo "pkg-oss tarball checksum verification succeeded!"; \
+                else \
+                    echo "pkg-oss tarball checksum verification failed!"; \
+                    exit 1; \
+                fi \
+                && tar xzvf ${REVISION}.tar.gz \
+                && cd pkg-oss-${REVISION} \
+                && cd debian \
+                && for target in base module-geoip module-image-filter module-njs module-xslt module-acme; do \
+                    make rules-$target; \
+                    mk-build-deps --install --tool="apt-get -o Debug::pkgProblemResolver=yes --no-install-recommends --yes" \
+                        debuild-$target/nginx-$NGINX_VERSION/debian/control; \
+                done \
+                && make base module-geoip module-image-filter module-njs module-xslt module-acme \
+            ) \
+# we don't remove APT lists here because they get re-downloaded and removed later
+            \
+# reset apt-mark's "manual" list so that "purge --auto-remove" will remove all build dependencies
+# (which is done after we install the built packages so we don't have to redownload any overlapping dependencies)
+            && apt-mark showmanual | xargs apt-mark auto > /dev/null \
+            && { [ -z "$savedAptMark" ] || apt-mark manual $savedAptMark; } \
+            \
+# create a temporary local APT repo to install from (so that dependency resolution can be handled by APT, as it should be)
+            && ls -lAFh "$tempDir" \
+            && ( cd "$tempDir" && dpkg-scanpackages . > Packages ) \
+            && grep '^Package: ' "$tempDir/Packages" \
+            && echo "deb [ trusted=yes ] file://$tempDir ./" > /etc/apt/sources.list.d/temp.list \
+# work around the following APT issue by using "Acquire::GzipIndexes=false" (overriding "/etc/apt/apt.conf.d/docker-gzip-indexes")
+#   Could not open file /var/lib/apt/lists/partial/_tmp_tmp.ODWljpQfkE_._Packages - open (13: Permission denied)
+#   ...
+#   E: Failed to fetch store:/var/lib/apt/lists/partial/_tmp_tmp.ODWljpQfkE_._Packages  Could not open file /var/lib/apt/lists/partial/_tmp_tmp.ODWljpQfkE_._Packages - open (13: Permission denied)
+            && apt-get -o Acquire::GzipIndexes=false update \
+            ;; \
+    esac \
+    \
+    && apt-get install --no-install-recommends --no-install-suggests -y \
+                        $nginxPackages \
+                        gettext-base \
+                        curl \
+    && apt-get remove --purge --auto-remove -y && rm -rf /var/lib/apt/lists/* /etc/apt/sources.list.d/nginx.list \
+    \
+# if we have leftovers from building, let's purge them (including extra, unnecessary build deps)
+    && if [ -n "$tempDir" ]; then \
+        apt-get purge -y --auto-remove \
+        && rm -rf "$tempDir" /etc/apt/sources.list.d/temp.list; \
+    fi \
+# forward request and error logs to docker log collector
+    && ln -sf /dev/stdout /var/log/nginx/access.log \
+    && ln -sf /dev/stderr /var/log/nginx/error.log \
+# create a docker-entrypoint.d directory
+    && mkdir /docker-entrypoint.d
+
+    ✗ LOW CVE-2017-9937
+      https://scout.docker.com/v/CVE-2017-9937
+      Affected range : >0
+      Fixed version  : not fixed
+
+
+   0C     0H     0M     1L  nginx 1.31.1-1~trixie
+pkg:deb/debian/nginx@1.31.1-1~trixie?os_distro=trixie&os_name=debian&os_version=13
+
+mainline/debian/Dockerfile (17:136)
+RUN set -x \
+# create nginx user/group first, to be consistent throughout docker variants
+    && groupadd --system --gid 101 nginx \
+    && useradd --system --gid nginx --no-create-home --home /nonexistent --comment "nginx user" --shell /bin/false --uid 101 nginx \
+    && apt-get update \
+    && apt-get install --no-install-recommends --no-install-suggests -y gnupg1 ca-certificates \
+    && \
+    NGINX_GPGKEYS="573BFD6B3D8FBC641079A6ABABF5BD827BD9BF62 8540A6F18833A80E9C1653A42FD21310B49F6B46 9E9BE90EACBCDE69FE9B204CBCDCD8A38D88A2B3"; \
+    NGINX_GPGKEY_PATH=/etc/apt/keyrings/nginx-archive-keyring.gpg; \
+    export GNUPGHOME="$(mktemp -d)"; \
+    found=''; \
+    for NGINX_GPGKEY in $NGINX_GPGKEYS; do \
+    for server in \
+        hkp://keyserver.ubuntu.com:80 \
+        pgp.mit.edu \
+    ; do \
+        echo "Fetching GPG key $NGINX_GPGKEY from $server"; \
+        gpg1 --batch --keyserver "$server" --keyserver-options timeout=10 --recv-keys "$NGINX_GPGKEY" && found=yes && break; \
+    done; \
+    test -z "$found" && echo >&2 "error: failed to fetch GPG key $NGINX_GPGKEY" && exit 1; \
+    done; \
+    gpg1 --batch --export $NGINX_GPGKEYS > "$NGINX_GPGKEY_PATH" ; \
+    rm -rf "$GNUPGHOME"; \
+    apt-get remove --purge --auto-remove -y gnupg1 && rm -rf /var/lib/apt/lists/* \
+    && dpkgArch="$(dpkg --print-architecture)" \
+    && nginxPackages=" \
+        nginx=${NGINX_VERSION}-${PKG_RELEASE} \
+        nginx-module-xslt=${NGINX_VERSION}-${DYNPKG_RELEASE} \
+        nginx-module-geoip=${NGINX_VERSION}-${DYNPKG_RELEASE} \
+        nginx-module-image-filter=${NGINX_VERSION}-${DYNPKG_RELEASE} \
+        nginx-module-njs=${NGINX_VERSION}+${NJS_VERSION}-${NJS_RELEASE} \
+        nginx-module-acme=${NGINX_VERSION}+${ACME_VERSION}-${PKG_RELEASE} \
+    " \
+    && case "$dpkgArch" in \
+        amd64|arm64) \
+# arches officialy built by upstream
+            echo "deb [signed-by=$NGINX_GPGKEY_PATH] https://nginx.org/packages/mainline/debian/ trixie nginx" >> /etc/apt/sources.list.d/nginx.list \
+            && apt-get update \
+            ;; \
+        *) \
+# we're on an architecture upstream doesn't officially build for
+# let's build binaries from the published packaging sources
+# new directory for storing sources and .deb files
+            tempDir="$(mktemp -d)" \
+            && chmod 777 "$tempDir" \
+# (777 to ensure APT's "_apt" user can access it too)
+            \
+# save list of currently-installed packages so build dependencies can be cleanly removed later
+            && savedAptMark="$(apt-mark showmanual)" \
+            \
+# build .deb files from upstream's packaging sources
+            && apt-get update \
+            && apt-get install --no-install-recommends --no-install-suggests -y \
+                cargo \
+                curl \
+                devscripts \
+                equivs \
+                git \
+                libxml2-utils \
+                lsb-release \
+                xsltproc \
+            && ( \
+                cd "$tempDir" \
+                && export CARGO_HOME="$tempDir/.cargo" \
+                && REVISION="b151aac903a6fc121d57f0909415381d0a1c1bbd" \
+                && REVISION=${REVISION%~*} \
+                && curl -f -L -O https://github.com/nginx/pkg-oss/archive/${REVISION}.tar.gz \
+                && PKGOSSCHECKSUM="72c13cfedc25a6c1e01c24dd1f736b0fefd1ef7f73ef569e2726fc99c0137327d2e71c8694bd8b0157be2a7247ec1769904746a852e7698caf7df8a5b0040440 *${REVISION}.tar.gz" \
+                && if [ "$(openssl sha512 -r ${REVISION}.tar.gz)" = "$PKGOSSCHECKSUM" ]; then \
+                    echo "pkg-oss tarball checksum verification succeeded!"; \
+                else \
+                    echo "pkg-oss tarball checksum verification failed!"; \
+                    exit 1; \
+                fi \
+                && tar xzvf ${REVISION}.tar.gz \
+                && cd pkg-oss-${REVISION} \
+                && cd debian \
+                && for target in base module-geoip module-image-filter module-njs module-xslt module-acme; do \
+                    make rules-$target; \
+                    mk-build-deps --install --tool="apt-get -o Debug::pkgProblemResolver=yes --no-install-recommends --yes" \
+                        debuild-$target/nginx-$NGINX_VERSION/debian/control; \
+                done \
+                && make base module-geoip module-image-filter module-njs module-xslt module-acme \
+            ) \
+# we don't remove APT lists here because they get re-downloaded and removed later
+            \
+# reset apt-mark's "manual" list so that "purge --auto-remove" will remove all build dependencies
+# (which is done after we install the built packages so we don't have to redownload any overlapping dependencies)
+            && apt-mark showmanual | xargs apt-mark auto > /dev/null \
+            && { [ -z "$savedAptMark" ] || apt-mark manual $savedAptMark; } \
+            \
+# create a temporary local APT repo to install from (so that dependency resolution can be handled by APT, as it should be)
+            && ls -lAFh "$tempDir" \
+            && ( cd "$tempDir" && dpkg-scanpackages . > Packages ) \
+            && grep '^Package: ' "$tempDir/Packages" \
+            && echo "deb [ trusted=yes ] file://$tempDir ./" > /etc/apt/sources.list.d/temp.list \
+# work around the following APT issue by using "Acquire::GzipIndexes=false" (overriding "/etc/apt/apt.conf.d/docker-gzip-indexes")
+#   Could not open file /var/lib/apt/lists/partial/_tmp_tmp.ODWljpQfkE_._Packages - open (13: Permission denied)
+#   ...
+#   E: Failed to fetch store:/var/lib/apt/lists/partial/_tmp_tmp.ODWljpQfkE_._Packages  Could not open file /var/lib/apt/lists/partial/_tmp_tmp.ODWljpQfkE_._Packages - open (13: Permission denied)
+            && apt-get -o Acquire::GzipIndexes=false update \
+            ;; \
+    esac \
+    \
+    && apt-get install --no-install-recommends --no-install-suggests -y \
+                        $nginxPackages \
+                        gettext-base \
+                        curl \
+    && apt-get remove --purge --auto-remove -y && rm -rf /var/lib/apt/lists/* /etc/apt/sources.list.d/nginx.list \
+    \
+# if we have leftovers from building, let's purge them (including extra, unnecessary build deps)
+    && if [ -n "$tempDir" ]; then \
+        apt-get purge -y --auto-remove \
+        && rm -rf "$tempDir" /etc/apt/sources.list.d/temp.list; \
+    fi \
+# forward request and error logs to docker log collector
+    && ln -sf /dev/stdout /var/log/nginx/access.log \
+    && ln -sf /dev/stderr /var/log/nginx/error.log \
+# create a docker-entrypoint.d directory
+    && mkdir /docker-entrypoint.d
+
+    ✗ LOW CVE-2009-4487
+      https://scout.docker.com/v/CVE-2009-4487
+      Affected range : >0
+      Fixed version  : not fixed
+
+
+
+78 vulnerabilities found in 25 packages
+  CRITICAL     0
+  HIGH         6
+  MEDIUM       11
+  LOW          60
+  UNSPECIFIED  1

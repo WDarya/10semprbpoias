@@ -1,0 +1,162 @@
+trivy image --severity HIGH,CRITICAL nginx:latest
+2026-06-16T23:07:36+03:00       INFO    Need to update DB
+2026-06-16T23:07:36+03:00       INFO    Downloading DB...       repository="ghcr.io/aquasecurity/trivy-db:2"
+96.30 MiB / 96.30 MiB [------------------------------------------------------------------] 100.00% 17.21 MiB p/s 5.8s
+2026-06-16T23:07:43+03:00       INFO    Vulnerability scanning is enabled
+2026-06-16T23:07:43+03:00       INFO    Secret scanning is enabled
+2026-06-16T23:07:43+03:00       INFO    If your scanning is slow, please try '--scanners vuln' to disable secret scanning
+2026-06-16T23:07:43+03:00       INFO    Please see also https://aquasecurity.github.io/trivy/v0.52/docs/scanner/secret/#recommendation for faster secret detection
+2026-06-16T23:07:48+03:00       INFO    Java DB Repository      repository=ghcr.io/aquasecurity/trivy-java-db:1
+2026-06-16T23:07:48+03:00       INFO    Downloading the Java DB...
+880.67 MiB / 880.67 MiB [-----------------------------------------------------------------] 100.00% 19.45 MiB p/s 45s
+2026-06-16T23:08:35+03:00       INFO    The Java DB is cached for 3 days. If you want to update the database more frequently, the '--reset' flag clears the DB cache.
+2026-06-16T23:08:35+03:00       INFO    Detected OS     family="debian" version="13.5"
+2026-06-16T23:08:35+03:00       INFO    [debian] Detecting vulnerabilities...   os_version="13" pkg_num=151
+2026-06-16T23:08:35+03:00       INFO    Number of language-specific files       num=0
+
+nginx:latest (debian 13.5)
+
+Total: 35 (HIGH: 33, CRITICAL: 2)
+
+┌─────────────────────────┬────────────────┬──────────┬──────────────┬───────────────────┬───────────────┬──────────────────────────────────────────────────────────────┐
+│         Library         │ Vulnerability  │ Severity │    Status    │ Installed Version │ Fixed Version │                            Title                             │
+├─────────────────────────┼────────────────┼──────────┼──────────────┼───────────────────┼───────────────┼──────────────────────────────────────────────────────────────┤
+│ curl                    │ CVE-2026-5773  │ HIGH     │ affected     │ 8.14.1-2+deb13u3  │               │ curl: libcurl: Wrong file transfer due to incorrect SMB      │
+│                         │                │          │              │                   │               │ connection reuse                                             │
+│                         │                │          │              │                   │               │ https://avd.aquasec.com/nvd/cve-2026-5773                    │
+│                         ├────────────────┤          │              │                   ├───────────────┼──────────────────────────────────────────────────────────────┤
+│                         │ CVE-2026-6276  │          │              │                   │               │ curl: libcurl: Information disclosure due to cookie leak     │
+│                         │                │          │              │                   │               │ when reusing connections with...                             │
+│                         │                │          │              │                   │               │ https://avd.aquasec.com/nvd/cve-2026-6276                    │
+├─────────────────────────┼────────────────┤          │              │                   ├───────────────┼──────────────────────────────────────────────────────────────┤
+│ libcurl4t64             │ CVE-2026-5773  │          │              │                   │               │ curl: libcurl: Wrong file transfer due to incorrect SMB      │
+│                         │                │          │              │                   │               │ connection reuse                                             │
+│                         │                │          │              │                   │               │ https://avd.aquasec.com/nvd/cve-2026-5773                    │
+│                         ├────────────────┤          │              │                   ├───────────────┼──────────────────────────────────────────────────────────────┤
+│                         │ CVE-2026-6276  │          │              │                   │               │ curl: libcurl: Information disclosure due to cookie leak     │
+│                         │                │          │              │                   │               │ when reusing connections with...                             │
+│                         │                │          │              │                   │               │ https://avd.aquasec.com/nvd/cve-2026-6276                    │
+├─────────────────────────┼────────────────┤          │              ├───────────────────┼───────────────┼──────────────────────────────────────────────────────────────┤
+│ libde265-0              │ CVE-2026-33164 │          │              │ 1.0.15-1+b3       │               │ libde265 is an open source implementation of the h.265 video │
+│                         │                │          │              │                   │               │ codec. Pr...                                                 │
+│                         │                │          │              │                   │               │ https://avd.aquasec.com/nvd/cve-2026-33164                   │
+├─────────────────────────┼────────────────┤          │              ├───────────────────┼───────────────┼──────────────────────────────────────────────────────────────┤
+│ libexpat1               │ CVE-2025-59375 │          │              │ 2.7.1-2           │               │ firefox: thunderbird: expat: libexpat in Expat allows        │
+│                         │                │          │              │                   │               │ attackers to trigger large dynamic...                        │
+│                         │                │          │              │                   │               │ https://avd.aquasec.com/nvd/cve-2025-59375                   │
+│                         ├────────────────┤          │              │                   ├───────────────┼──────────────────────────────────────────────────────────────┤
+│                         │ CVE-2026-25210 │          │              │                   │               │ libexpat: libexpat: Information disclosure and data          │
+│                         │                │          │              │                   │               │ integrity issues due to integer overflow...                  │
+│                         │                │          │              │                   │               │ https://avd.aquasec.com/nvd/cve-2026-25210                   │
+│                         ├────────────────┤          │              │                   ├───────────────┼──────────────────────────────────────────────────────────────┤
+│                         │ CVE-2026-45186 │          │              │                   │               │ libexpat: denial of service via crafted XML input            │
+│                         │                │          │              │                   │               │ https://avd.aquasec.com/nvd/cve-2026-45186                   │
+├─────────────────────────┼────────────────┤          │              ├───────────────────┼───────────────┼──────────────────────────────────────────────────────────────┤
+│ libheif-plugin-dav1d    │ CVE-2025-68431 │          │              │ 1.19.8-1          │               │ libheif is an HEIF and AVIF file format decoder and encoder. │
+│                         │                │          │              │                   │               │ Prior...                                                     │
+│                         │                │          │              │                   │               │ https://avd.aquasec.com/nvd/cve-2025-68431                   │
+│                         ├────────────────┤          │              │                   ├───────────────┼──────────────────────────────────────────────────────────────┤
+│                         │ CVE-2026-32740 │          │              │                   │               │ libheif: libheif: Arbitrary code execution or denial of      │
+│                         │                │          │              │                   │               │ service via crafted HEIF/AVIF...                             │
+│                         │                │          │              │                   │               │ https://avd.aquasec.com/nvd/cve-2026-32740                   │
+│                         ├────────────────┤          │              │                   ├───────────────┼──────────────────────────────────────────────────────────────┤
+│                         │ CVE-2026-32741 │          │              │                   │               │ libheif: libheif: Heap buffer overflow vulnerability in      │
+│                         │                │          │              │                   │               │ image decoding                                               │
+│                         │                │          │              │                   │               │ https://avd.aquasec.com/nvd/cve-2026-32741                   │
+│                         ├────────────────┤          │              │                   ├───────────────┼──────────────────────────────────────────────────────────────┤
+│                         │ CVE-2026-32882 │          │              │                   │               │ libheif: libheif: Denial of Service and Information          │
+│                         │                │          │              │                   │               │ Disclosure vulnerability                                     │
+│                         │                │          │              │                   │               │ https://avd.aquasec.com/nvd/cve-2026-32882                   │
+│                         ├────────────────┤          │              │                   ├───────────────┼──────────────────────────────────────────────────────────────┤
+│                         │ CVE-2026-41071 │          │              │                   │               │ libheif is a HEIF and AVIF file format decoder and encoder.  │
+│                         │                │          │              │                   │               │ In...                                                        │
+│                         │                │          │              │                   │               │ https://avd.aquasec.com/nvd/cve-2026-41071                   │
+├─────────────────────────┼────────────────┤          │              │                   ├───────────────┼──────────────────────────────────────────────────────────────┤
+│ libheif-plugin-libde265 │ CVE-2025-68431 │          │              │                   │               │ libheif is an HEIF and AVIF file format decoder and encoder. │
+│                         │                │          │              │                   │               │ Prior...                                                     │
+│                         │                │          │              │                   │               │ https://avd.aquasec.com/nvd/cve-2025-68431                   │
+│                         ├────────────────┤          │              │                   ├───────────────┼──────────────────────────────────────────────────────────────┤
+│                         │ CVE-2026-32740 │          │              │                   │               │ libheif: libheif: Arbitrary code execution or denial of      │
+│                         │                │          │              │                   │               │ service via crafted HEIF/AVIF...                             │
+│                         │                │          │              │                   │               │ https://avd.aquasec.com/nvd/cve-2026-32740                   │
+│                         ├────────────────┤          │              │                   ├───────────────┼──────────────────────────────────────────────────────────────┤
+│                         │ CVE-2026-32741 │          │              │                   │               │ libheif: libheif: Heap buffer overflow vulnerability in      │
+│                         │                │          │              │                   │               │ image decoding                                               │
+│                         │                │          │              │                   │               │ https://avd.aquasec.com/nvd/cve-2026-32741                   │
+│                         ├────────────────┤          │              │                   ├───────────────┼──────────────────────────────────────────────────────────────┤
+│                         │ CVE-2026-32882 │          │              │                   │               │ libheif: libheif: Denial of Service and Information          │
+│                         │                │          │              │                   │               │ Disclosure vulnerability                                     │
+│                         │                │          │              │                   │               │ https://avd.aquasec.com/nvd/cve-2026-32882                   │
+│                         ├────────────────┤          │              │                   ├───────────────┼──────────────────────────────────────────────────────────────┤
+│                         │ CVE-2026-41071 │          │              │                   │               │ libheif is a HEIF and AVIF file format decoder and encoder.  │
+│                         │                │          │              │                   │               │ In...                                                        │
+│                         │                │          │              │                   │               │ https://avd.aquasec.com/nvd/cve-2026-41071                   │
+├─────────────────────────┼────────────────┤          │              │                   ├───────────────┼──────────────────────────────────────────────────────────────┤
+│ libheif1                │ CVE-2025-68431 │          │              │                   │               │ libheif is an HEIF and AVIF file format decoder and encoder. │
+│                         │                │          │              │                   │               │ Prior...                                                     │
+│                         │                │          │              │                   │               │ https://avd.aquasec.com/nvd/cve-2025-68431                   │
+│                         ├────────────────┤          │              │                   ├───────────────┼──────────────────────────────────────────────────────────────┤
+│                         │ CVE-2026-32740 │          │              │                   │               │ libheif: libheif: Arbitrary code execution or denial of      │
+│                         │                │          │              │                   │               │ service via crafted HEIF/AVIF...                             │
+│                         │                │          │              │                   │               │ https://avd.aquasec.com/nvd/cve-2026-32740                   │
+│                         ├────────────────┤          │              │                   ├───────────────┼──────────────────────────────────────────────────────────────┤
+│                         │ CVE-2026-32741 │          │              │                   │               │ libheif: libheif: Heap buffer overflow vulnerability in      │
+│                         │                │          │              │                   │               │ image decoding                                               │
+│                         │                │          │              │                   │               │ https://avd.aquasec.com/nvd/cve-2026-32741                   │
+│                         ├────────────────┤          │              │                   ├───────────────┼──────────────────────────────────────────────────────────────┤
+│                         │ CVE-2026-32882 │          │              │                   │               │ libheif: libheif: Denial of Service and Information          │
+│                         │                │          │              │                   │               │ Disclosure vulnerability                                     │
+│                         │                │          │              │                   │               │ https://avd.aquasec.com/nvd/cve-2026-32882                   │
+│                         ├────────────────┤          │              │                   ├───────────────┼──────────────────────────────────────────────────────────────┤
+│                         │ CVE-2026-41071 │          │              │                   │               │ libheif is a HEIF and AVIF file format decoder and encoder.  │
+│                         │                │          │              │                   │               │ In...                                                        │
+│                         │                │          │              │                   │               │ https://avd.aquasec.com/nvd/cve-2026-41071                   │
+├─────────────────────────┼────────────────┤          │              ├───────────────────┼───────────────┼──────────────────────────────────────────────────────────────┤
+│ libsqlite3-0            │ CVE-2026-11822 │          │              │ 3.46.1-7+deb13u1  │               │ SQLite before 3.53.2 contains memory corruption              │
+│                         │                │          │              │                   │               │ vulnerabilities in the ...                                   │
+│                         │                │          │              │                   │               │ https://avd.aquasec.com/nvd/cve-2026-11822                   │
+│                         ├────────────────┤          │              │                   ├───────────────┼──────────────────────────────────────────────────────────────┤
+│                         │ CVE-2026-11824 │          │              │                   │               │ SQLite before 3.53.2 contains a heap-based buffer overflow   │
+│                         │                │          │              │                   │               │ vulnerabili ...                                              │
+│                         │                │          │              │                   │               │ https://avd.aquasec.com/nvd/cve-2026-11824                   │
+├─────────────────────────┼────────────────┤          │              ├───────────────────┼───────────────┼──────────────────────────────────────────────────────────────┤
+│ libssh2-1t64            │ CVE-2026-7598  │          │              │ 1.11.1-1          │               │ libssh2: integer overflow via large username or password     │
+│                         │                │          │              │                   │               │ arguments                                                    │
+│                         │                │          │              │                   │               │ https://avd.aquasec.com/nvd/cve-2026-7598                    │
+├─────────────────────────┼────────────────┤          │              ├───────────────────┼───────────────┼──────────────────────────────────────────────────────────────┤
+│ libtinfo6               │ CVE-2025-69720 │          │              │ 6.5+20250216-2    │               │ ncurses: ncurses: Buffer overflow vulnerability may lead to  │
+│                         │                │          │              │                   │               │ arbitrary code execution.                                    │
+│                         │                │          │              │                   │               │ https://avd.aquasec.com/nvd/cve-2025-69720                   │
+├─────────────────────────┤                │          │              │                   ├───────────────┤                                                              │
+│ ncurses-base            │                │          │              │                   │               │                                                              │
+│                         │                │          │              │                   │               │                                                              │
+│                         │                │          │              │                   │               │                                                              │
+├─────────────────────────┤                │          │              │                   ├───────────────┤                                                              │
+│ ncurses-bin             │                │          │              │                   │               │                                                              │
+│                         │                │          │              │                   │               │                                                              │
+│                         │                │          │              │                   │               │                                                              │
+├─────────────────────────┼────────────────┼──────────┼──────────────┼───────────────────┼───────────────┼──────────────────────────────────────────────────────────────┤
+│ perl-base               │ CVE-2026-42496 │ CRITICAL │ fix_deferred │ 5.40.1-6          │               │ perl-archive-tar: perl-archive-tar: Path traversal via       │
+│                         │                │          │              │                   │               │ crafted symlinks allows arbitrary file access                │
+│                         │                │          │              │                   │               │ https://avd.aquasec.com/nvd/cve-2026-42496                   │
+│                         ├────────────────┤          ├──────────────┤                   ├───────────────┼──────────────────────────────────────────────────────────────┤
+│                         │ CVE-2026-8376  │          │ affected     │                   │               │ Perl versions through 5.43.10 have a heap buffer overflow    │
+│                         │                │          │              │                   │               │ when compili ......                                          │
+│                         │                │          │              │                   │               │ https://avd.aquasec.com/nvd/cve-2026-8376                    │
+│                         ├────────────────┼──────────┼──────────────┤                   ├───────────────┼──────────────────────────────────────────────────────────────┤
+│                         │ CVE-2026-42497 │ HIGH     │ fix_deferred │                   │               │ Archive::Tar versions before 3.08 for Perl extract hardlinks │
+│                         │                │          │              │                   │               │ to attack ...                                                │
+│                         │                │          │              │                   │               │ https://avd.aquasec.com/nvd/cve-2026-42497                   │
+│                         ├────────────────┤          ├──────────────┤                   ├───────────────┼──────────────────────────────────────────────────────────────┤
+│                         │ CVE-2026-48959 │          │ affected     │                   │               │ IO::Uncompress::Unzip versions before 2.220 for Perl allow   │
+│                         │                │          │              │                   │               │ CPU exhaust ...                                              │
+│                         │                │          │              │                   │               │ https://avd.aquasec.com/nvd/cve-2026-48959                   │
+│                         ├────────────────┤          │              │                   ├───────────────┼──────────────────────────────────────────────────────────────┤
+│                         │ CVE-2026-48962 │          │              │                   │               │ perl-IO-Compress: perl-IO-Compress: Arbitrary code execution │
+│                         │                │          │              │                   │               │ via attacker-controlled output glob                          │
+│                         │                │          │              │                   │               │ https://avd.aquasec.com/nvd/cve-2026-48962                   │
+│                         ├────────────────┤          ├──────────────┤                   ├───────────────┼──────────────────────────────────────────────────────────────┤
+│                         │ CVE-2026-9538  │          │ fix_deferred │                   │               │ Archive::Tar versions before 3.10 for Perl allow memory      │
+│                         │                │          │              │                   │               │ exhaustion via ...                                           │
+│                         │                │          │              │                   │               │ https://avd.aquasec.com/nvd/cve-2026-9538                    │
+└─────────────────────────┴────────────────┴──────────┴──────────────┴───────────────────┴───────────────┴──────────────────────────────────────────────────────────────┘
