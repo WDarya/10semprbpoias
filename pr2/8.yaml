@@ -1,0 +1,32 @@
+# Обычный синтаксис (block style)
+server_config_block:
+  host: localhost
+  port: 8080
+  timeout: 30
+  ssl_enabled: true
+  endpoints:
+    - /api/v1/users
+    - /api/v1/products
+    - /api/v1/orders
+  database:
+    host: localhost
+    port: 5432
+    name: mydb
+
+# Flow style (в одной строке)
+server_config_flow:
+  host: localhost
+  port: 8080
+  timeout: 30
+  ssl_enabled: true
+  endpoints: [/api/v1/users, /api/v1/products, /api/v1/orders]
+  database: {host: localhost, port: 5432, name: mydb}
+
+# Смешанный стиль (наиболее читаемый)
+server_config_mixed:
+  host: localhost
+  port: 8080
+  endpoints:
+    - /api/v1/users
+    - /api/v1/products
+  database: {host: localhost, port: 5432, name: mydb}

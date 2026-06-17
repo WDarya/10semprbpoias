@@ -1,0 +1,12 @@
+# ISO 8601 форматы даты и времени
+current_date: 2024-12-25
+current_datetime: 2024-12-25T14:30:00
+datetime_with_timezone: 2024-12-25T14:30:00+03:00
+date_with_time: 2024-12-25T14:30:00Z  # Z означает UTC
+
+# Пример в контексте конфигурации
+project:
+  name: "My Project"
+  start_date: 2024-01-01
+  deadline: 2024-06-30T23:59:59+03:00
+  created_at: 2024-12-25T10:15:30.123456+00:00

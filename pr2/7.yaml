@@ -1,0 +1,29 @@
+# Многострочная строка с Python кодом, сохраняющая переносы строк
+python_script: |
+  #!/usr/bin/env python3
+  # Простой веб-сервер на Python
+  
+  import http.server
+  import socketserver
+  
+  PORT = 8000
+  
+  class MyHandler(http.server.SimpleHTTPRequestHandler):
+      def do_GET(self):
+          self.send_response(200)
+          self.send_header('Content-type', 'text/html')
+          self.end_headers()
+          self.wfile.write(b'<h1>Hello, YAML!</h1>')
+  
+  with socketserver.TCPServer(("", PORT), MyHandler) as httpd:
+      print(f"Server running on port {PORT}")
+      httpd.serve_forever()
+
+# Альтернативный способ с оператором |+ (сохраняет завершающие переносы)
+python_script_with_trailing: |+
+  def calculate_sum(a, b):
+      return a + b
+  
+  result = calculate_sum(10, 20)
+  print(f"Result: {result}")
+  

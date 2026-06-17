@@ -1,0 +1,47 @@
+# Базовая конфигурация с якорями
+base_config: &base
+  protocol: http
+  timeout: 30
+  retries: 3
+  logging: true
+  environment: production
+
+# Базовая конфигурация базы данных
+db_base: &db_base
+  port: 5432
+  max_connections: 100
+  timeout: 10
+
+# Конфигурация для разработки (наследует базу)
+development:
+  <<: *base
+  environment: development
+  debug: true
+  database:
+    <<: *db_base
+    host: localhost
+    name: dev_db
+    max_connections: 20  # Переопределяем
+    port: 5433           # Переопределяем
+
+# Конфигурация для продакшена (наследует базу)
+production:
+  <<: *base
+  ssl: true
+  database:
+    <<: *db_base
+    host: db.production.example.com
+    name: prod_db
+    max_connections: 200  # Переопределяем
+
+# Конфигурация для тестирования
+testing:
+  <<: *base
+  environment: testing
+  debug: true
+  logging: false  # Переопределяем
+  database:
+    <<: *db_base
+    host: localhost
+    name: test_db
+    port: 5434  # Переопределяем

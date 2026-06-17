@@ -1,0 +1,178 @@
+name: CI/CD Pipeline with Matrix Testing
+
+# Якоря для переиспользования конфигураций
+python_base: &python_base
+  python-version: 3.11
+  cache: pip
+  cache-dependency-path: requirements.txt
+
+install_deps: &install_deps
+  name: Install dependencies
+  run: |
+    python -m pip install --upgrade pip
+    pip install -r requirements.txt
+    pip install pytest pytest-cov flake8
+
+run_tests: &run_tests
+  name: Run tests
+  run: |
+    pytest --cov=./ --cov-report=xml
+
+# Основной workflow
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    name: Test with ${{ matrix.compiler }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    
+    # Матрица тестирования
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        compiler: [gcc, clang]
+        python-version: [3.9, 3.10, 3.11]
+        exclude:
+          - os: windows-latest
+            compiler: clang
+          - os: macos-latest
+            compiler: gcc
+        include:
+          - os: ubuntu-latest
+            compiler: gcc
+            gcc-version: 13
+          - os: ubuntu-latest
+            compiler: clang
+            clang-version: 17
+    
+    env:
+      COMPILER: ${{ matrix.compiler }}
+      PYTHON_VERSION: ${{ matrix.python-version }}
+      CC: ${{ matrix.compiler == 'gcc' && 'gcc-13' || 'clang-17' }}
+    
+    steps:
+      # Шаг 1: Checkout кода
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      # Шаг 2: Установка компилятора (Linux)
+      - name: Setup compiler (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          if [ "${{ matrix.compiler }}" = "gcc" ]; then
+            sudo apt-get update
+            sudo apt-get install -y gcc-13 g++-13
+            sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 100
+          else
+            sudo apt-get update
+            sudo apt-get install -y clang-17
+            sudo update-alternatives --install /usr/bin/clang clang /usr/bin/clang-17 100
+          fi
+      
+      # Шаг 3: Установка компилятора (macOS)
+      - name: Setup compiler (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          if [ "${{ matrix.compiler }}" = "clang" ]; then
+            brew install llvm
+            echo "/usr/local/opt/llvm/bin" >> $GITHUB_PATH
+          else
+            brew install gcc@13
+            echo "/usr/local/opt/gcc/bin" >> $GITHUB_PATH
+          fi
+      
+      # Шаг 4: Установка Python
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with: *python_base
+      
+      # Шаг 5: Установка зависимостей
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          pip install pytest pytest-cov flake8 black mypy
+      
+      # Шаг 6: Линтинг
+      - name: Lint with flake8
+        run: |
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+      
+      # Шаг 7: Проверка типов
+      - name: Type check with mypy
+        run: |
+          mypy . --ignore-missing-imports || true
+      
+      # Шаг 8: Сборка проекта (C/C++)
+      - name: Build project
+        run: |
+          mkdir -p build && cd build
+          cmake .. -DCMAKE_C_COMPILER=$CC -DCMAKE_CXX_COMPILER=${{ matrix.compiler == 'gcc' && 'g++-13' || 'clang++-17' }}
+          cmake --build . --config Release
+        if: matrix.os == 'ubuntu-latest'
+      
+      # Шаг 9: Запуск тестов
+      - name: Run Python tests
+        run: |
+          pytest tests/ --cov=./ --cov-report=xml --cov-report=html
+      
+      # Шаг 10: Запуск C/C++ тестов
+      - name: Run C++ tests
+        run: |
+          cd build && ctest --output-on-failure
+        if: matrix.os == 'ubuntu-latest'
+      
+      # Шаг 11: Загрузка отчета о покрытии
+      - name: Upload coverage report
+        uses: codecov/codecov-action@v4
+        with:
+          file: ./coverage.xml
+          flags: ${{ matrix.os }}-${{ matrix.compiler }}
+          name: codecov-${{ matrix.os }}-${{ matrix.compiler }}
+          fail_ci_if_error: false
+      
+      # Шаг 12: Создание артефактов
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-${{ matrix.os }}-${{ matrix.compiler }}
+          path: |
+            coverage.xml
+            htmlcov/
+            build/Testing/
+          retention-days: 30
+
+  # Дополнительный job для сборки документации
+  docs:
+    name: Build Documentation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with: *python_base
+      
+      - name: Install docs dependencies
+        run: |
+          pip install sphinx sphinx-rtd-theme
+          if [ -f docs/requirements.txt ]; then pip install -r docs/requirements.txt; fi
+      
+      - name: Build documentation
+        run: |
+          cd docs
+          make html
+      
+      - name: Upload documentation
+        uses: actions/upload-artifact@v4
+        with:
+          name: documentation
+          path: docs/_build/html/
+          retention-days: 14

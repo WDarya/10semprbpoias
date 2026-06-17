@@ -1,0 +1,21 @@
+# Список продуктов с информацией о названии, цене и количестве
+products:
+  - name: "Ноутбук ASUS ROG"
+    price: 120000.00
+    quantity: 15
+    category: "Электроника"
+    
+  - name: "Смартфон iPhone 15"
+    price: 85000.00
+    quantity: 8
+    category: "Электроника"
+    
+  - name: "Наушники Sony WH-1000XM5"
+    price: 25000.00
+    quantity: 0
+    category: "Аудио"
+    
+  - name: "Книга 'Изучаем YAML'"
+    price: 1500.00
+    quantity: 100
+    category: "Книги"
